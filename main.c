@@ -42,7 +42,7 @@ int tokenize(char line[],char* tokens[]){
             continue;
         }
 
-        int token_length = strlen(token);
+        int token_length = strlen(token) + 1;
         switch (current_state){
             case DEFAULT:
                 if(character == '\\'){
@@ -52,15 +52,15 @@ int tokenize(char line[],char* tokens[]){
                    continue; 
                 }
 
-                if(character != ' '){
+                if(character != ' ' && character != '\n'){
                     add_char(token,character);
                     token_length++;
                 }    
 
-                if((character == ' ' || i == line_length - 1) && token_length!= 0){
+                if((character == ' ' || i == line_length - 1) && token_length!= 1){
                     tokens[token_index] = (char*)malloc(token_length);
                     strncpy(tokens[token_index],token,token_length);
-                    tokens[token_index++][token_length] = '\0';
+                    tokens[token_index++][token_length - 1] = '\0';
                     //reset token
                     token[0] = '\0';
                 }
@@ -69,10 +69,9 @@ int tokenize(char line[],char* tokens[]){
 
             case SINGLE_QUOTE:
                 if(character == '\''){
-                    if(token_length == 0) token_length = 1;
-
                     tokens[token_index] = (char*)malloc(token_length);
-                    strncpy(tokens[token_index++],token,token_length);        
+                    strncpy(tokens[token_index],token,token_length);        
+                    tokens[token_index++][token_length - 1] = '\0';
 
                     //reset token
                     token[0] = '\0';
@@ -91,11 +90,9 @@ int tokenize(char line[],char* tokens[]){
                 }
 
                 if(character == '"'){
-
-                    if(token_length == 0) token_length = 1;
-
                     tokens[token_index] = (char*)malloc(token_length);
-                    strncpy(tokens[token_index++],token,token_length);
+                    strncpy(tokens[token_index],token,token_length);
+                    tokens[token_index++][token_length - 1] = '\0';
 
                     //reset token
                     token[0] = '\0';
