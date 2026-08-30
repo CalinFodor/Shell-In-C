@@ -1,24 +1,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
-void add_char(char *s, char c) {
-
-    while (*s++);
-  
-    *(s - 1) = c;
-  
-    *s = '\0';
+void add_char(char *s, char c)
+{
+    int l = strlen(s);
+    s[l] = c;
+    s[l + 1] = '\0';
 }
 
-void add_string(char* strings[],char* string,int poz){
+void add_string(char *strings[], char *string, int poz)
+{
     int s_len = strlen(string) + 1;
-    strings[poz] = (char*)malloc(s_len);
-    strncpy(strings[poz],string,s_len-1);
+    strings[poz] = (char *)malloc(s_len);
+    strncpy(strings[poz], string, s_len - 1);
     strings[poz][s_len - 1] = '\0';
 }
 
-int tokenize_pipeline(char line[], char *tokens[])
+void copy_string(char *dest, char *src)
+{
+    int s_len = strlen(src) + 1;
+    dest = (char *)malloc(s_len);
+    strncpy(dest, src, s_len - 1);
+    dest[s_len - 1] = '\0';
+}
+
+int tokenize_redirects(char line[], char *tokens[])
 {
     char token[128] = {'\0'};
     int token_index = 0;
@@ -26,81 +34,141 @@ int tokenize_pipeline(char line[], char *tokens[])
     int line_length = strlen(line);
     int in_token = 0;
 
-    for(int i=0;i<line_length;i++){
+    for (int i = 0; i < line_length; i++)
+    {
         char character = line[i];
 
-        if(character == '|'){
-            if(in_token){
-                add_string(tokens,token,token_index);
+        if (isdigit(character) && !in_token && i != line_length - 1)
+        {
+            char next_character = line[i + 1];
+            if (next_character == '>' || next_character == '<')
+            {
+                add_char(token,character);
+                add_char(token,next_character);
+                int i_moves = 1;
+
+                if (i <= line_length - 3)
+                {
+                    char next_next_character = line[i + 2];
+                    if (next_character == next_next_character)
+                    {
+                       add_char(token,next_character);
+                       i_moves++;
+                    }
+                }
+
+                add_string(tokens, token, token_index++);
+                i += i_moves;
+                token[0] = '\0';
+                continue;
+            }
+        }
+
+        if (character == '>' || character == '<')
+        {
+            if (in_token)
+            {
+                add_string(tokens, token, token_index);
                 token_index++;
                 token[0] = '\0';
+                in_token = 0;
             }
 
-            add_string(tokens,"|",token_index);
-            token_index++;
-            in_token=0;
-        }else if(character != ' '){
             add_char(token,character);
+
+            if (i != line_length - 1)
+            {
+                char next_character = line[i + 1];
+                if (character == next_character)
+                {
+                    add_char(token,character);
+                    i++;
+                }
+            }
+
+            add_string(tokens, token, token_index++);
+            token[0] = '\0';
+        }
+        else if (character != ' ')
+        {
+            add_char(token, character);
             in_token = 1;
-        }else if(in_token){
-            add_string(tokens,token,token_index);
+        }
+        else if (in_token)
+        {
+            add_string(tokens, token, token_index);
             token_index++;
             token[0] = '\0';
             in_token = 0;
         }
 
-        if(i == line_length - 1 && in_token){
-            add_string(tokens,token,token_index++);
+        if (i == line_length - 1 && in_token)
+        {
+            add_string(tokens, token, token_index++);
         }
     }
     return token_index;
 }
 
-int is_pipe(char* token){
-    if (strcmp(token,"|") == 0)
-        return 1;
-    return 0;
+
+typedef struct _Redirect
+{
+    char *stream;
+    char *operation;
+    char *target;
+} Redirect;
+
+Redirect new_redirect(char *stream, char *operation, char *target)
+{
+    Redirect redir;
+
+    copy_string(redir.stream, stream);
+    copy_string(redir.operation, operation);
+    copy_string(redir.target, target);
+
+    return redir;
 }
 
-int validate_pipeline(char* tokens[],int n){
-    for(int i=0;i<n;i++){
-        if((i == 0 || i == n-1) && is_pipe(tokens[i])){
-            return -1;
-        }
-        if(is_pipe(tokens[i])){
-            if(is_pipe(tokens[i - 1]) || is_pipe(tokens[i+1])){
-                return -1;
-            }
-        }
-    }
-    return n;
+int is_redirect_operator(char* token){
+    
+    
+
 }
 
-void print_tokens(char* tokens[],int n){
-    if (n == -1){
-        printf("ERR syntax error: empty command in pipeline\n");
-        return;
-    }
+void parse_redirects(char *tokens[], int n)
+{
+    char *words[128];
+    int words_index;
 
-    for(int i=0;i<n;i++){
-        printf("%s",tokens[i]);
-        if(i != n - 1)
-            printf(" ");
+    Redirect redirects[128];
+    int redirects_index;
+
+    for (int i = 0; i < n; i++)
+    {
+
     }
+}
+
+
+void print_tokens(char *tokens[], int n)
+{
+    for (int i = 0; i < n; i++)
+        printf("[%s] ",tokens[i]);
     printf("\n");
 }
 
-void free_tokens(char* tokens[],int n){
-    for(int i=0;i<n;i++)
+void free_tokens(char *tokens[], int n)
+{
+    for (int i = 0; i < n; i++)
         free(tokens[i]);
 }
 
-void parse_pipeline(char line[]){
-    char* tokens[100];
-    int n = tokenize_pipeline(line,tokens);
-    n = validate_pipeline(tokens,n);
-    print_tokens(tokens,n);
-    free_tokens(tokens,n);
+void process_redirects(char line[])
+{
+    char *tokens[100];
+    int n = tokenize_redirects(line, tokens);
+    print_tokens(tokens, n);
+    free_tokens(tokens, n);
 }
 
 int main(void)
@@ -110,7 +178,8 @@ int main(void)
     {
         if (line[0] == '\n' || line[0] == 0)
             continue;
-        parse_pipeline(line);
+        line[strlen(line) - 1] = '\0';
+        process_redirects(line);
     }
     return 0;
 }
