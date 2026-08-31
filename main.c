@@ -43,7 +43,7 @@ Redir parse_cmd(char* cmd,int* term_idx){
 
         if(character == '<' && i != cmd_len - 1){
             char next_character = cmd[i+1];
-            if(next_character == '<' && i < cmd_len - 3){
+            if(next_character == '<'){
                 char next_next_character = cmd[i+2];
 
                 if(next_next_character == '-'){
@@ -152,20 +152,56 @@ int main(void)
     char *lines[1024];
     int nolines = 0;
 
+    Redir redir = None;
+    char term[128] = {'\0'};
+    int term_idx = 0;
+
     while (fgets(line, sizeof line, stdin))
     {
-       printf("%s",line);
-       if(line[0] == '\n') {
-            parse_here_docs(lines,nolines);
-            free_strings(lines,nolines);
-            nolines = 0;
-            continue;
-       }
-       
-       if(line[strlen(line) - 1] == '\n')
+       if(line[strlen(line) - 1] == '\n') 
             line[strlen(line) - 1] = '\0';
         
-       copy_string(&lines[nolines++],line); 
+       if(redir == None){
+            redir = parse_cmd(line,&term_idx);
+            printf("CMD %s\n",line);
+            printf("BODY:\n");
+        }
+        
+        switch(redir){
+            case None:    
+                printf("END\n");
+                break;
+            case Arrow:
+                if(strlen(term) == 0){
+                    extract_terminator(line,term_idx,term);
+                    continue;
+                }
+
+                if(strcmp(term,line) == 0){
+                    printf("END\n");
+                    redir = None;
+                }else{
+                    printf("%s\n",line);
+                }
+                
+                break;
+            case LineArrow:
+                if(strlen(term) == 0){
+                    extract_terminator(line,term_idx,term);
+                    trim_leading_tabs(term);
+                    continue;
+                }
+                trim_leading_tabs(line);
+
+                if(strcmp(term,line) == 0){
+                    printf("END\n");
+                    redir = None;
+                }else{
+                    printf("%s\n",line);
+                }
+
+                break;
+        }
     }
 
     return 0;
