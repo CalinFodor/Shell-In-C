@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-
+#include <stdbool.h>
  
 void add_char(char *s, char c)
 {
@@ -80,6 +80,7 @@ void print_tokens(char* tokens[],int n){
 typedef struct _VarTabEntry{
     char* name;
     char* value;
+
 } VarTabEntry;
 
 typedef struct _VariableTable{
@@ -92,6 +93,16 @@ VariableTable VAR_TABLE;
 void add_var_to_table(char* name,char *value){
     copy_string(&VAR_TABLE.entries[VAR_TABLE.idx].name,name);
     copy_string(&VAR_TABLE.entries[VAR_TABLE.idx++].value,value);
+}
+
+void get_var_value_from_table(char* name,char** value){
+    for(int i=0;i<VAR_TABLE.idx;i++){
+        char* key = VAR_TABLE.entries[i].name;
+        char* key_value = VAR_TABLE.entries[i].value;
+        if(strcmp(name,key) == 0){
+            copy_string(value,key_value);
+        }    
+    }
 }
 
 void print_table(){
@@ -107,19 +118,63 @@ void free_table(){
     }
 }
 
+void set(char* tokens[],int n){
+    if(n != 3){
+        printf("Usage: SET <name> <value>\n");
+        return;
+    }
+
+    char* name = tokens[1];
+    char* value = tokens[2];
+
+    add_var_to_table(name,value);
+}
+
+void expand_token(char* token){
+    int token_length = strlen(token);
+    int var_name_start = 0;
+    for(int i=1;i<token_length;i++){
+        char character = token[i];
+
+        //$var case
+        if(i == 1 && character != '{'){
+            char* var_name;
+            copy_string(&var_name,token+1);
+            char* value = NULL;
+
+            get_var_value_from_table(var_name,&value);
+
+            if(strlen(value)){
+                printf("%s ",value);
+            }else{
+                printf("VAR NOT FOUND");
+            }
+            return;
+        }
+    }
+}
+
+void expand(char* tokens[],int n){
+    for(int i=1;i<n;i++){
+        char* token = tokens[i];
+
+        if(token[0] == '$'){
+            expand_token(token);
+        }else{
+           printf("%s ",token); 
+        }
+    }
+
+}
+
 void execute_command(char* tokens[],int n){
     char* cmd = tokens[0];
 
     if(strcmp(cmd,"SET") == 0){
-        if(n != 3){
-            printf("ERROR: Invalid arguments for SET\n");
-            return;
-        }
-
-        char* name = tokens[1];
-        char* value = tokens[2];
-
-        add_var_to_table(name,value);
+        set(tokens,n);
+    }
+    else if(strcmp(cmd,"EXPAND") == 0){
+        expand(tokens,n);
     }else{
         printf("ERROR: Unknown command\n");
     }
