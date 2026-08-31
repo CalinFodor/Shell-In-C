@@ -19,189 +19,195 @@ void add_string(char *strings[], char *string, int poz)
     strings[poz][s_len - 1] = '\0';
 }
 
-void copy_string(char **dest, char *src)
+void copy_string(char *dest, char *src)
 {
     int s_len = strlen(src) + 1;
-    *dest = (char *)malloc(s_len);
-    strncpy(*dest, src, s_len - 1);
-    (*dest)[s_len - 1] = '\0';
+    dest = (char *)malloc(s_len);
+    strncpy(dest, src, s_len - 1);
+    dest[s_len - 1] = '\0';
 }
 
-typedef enum _Redir{
-    None,
-    Arrow,
-    LineArrow
-}Redir;
 
-Redir parse_cmd(char* cmd,int* term_idx){
+int tokenize(char line[],char* tokens[],char separator){
 
-    int cmd_len = strlen(cmd);
-    Redir redir = None;
+    int token_index = 0;
 
-    for(int i=0;i<cmd_len;i++){
-        char character = cmd[i];
+    int token_start = 0;
+    int in_token = 0;
 
-        if(character == '<' && i != cmd_len - 1){
-            char next_character = cmd[i+1];
-            if(next_character == '<'){
-                char next_next_character = cmd[i+2];
+    int line_length = strlen(line);
 
-                if(next_next_character == '-'){
-                    redir = LineArrow;
-                    *term_idx = i + 3;
-                }else{
-                    redir = Arrow;
-                    *term_idx = i+2;
-                }
-                break;
-            }
-        }
-    }
-    return redir;
-
-}
-
-void extract_terminator(char* line,int term_idx,char term[]){
-    int s_len = strlen(line);
-    int found_sep = 0;
-    for(int i=term_idx;i<s_len;i++){
+    for(int i=0;i<line_length;i++){
         char character = line[i];
 
-        if(character == '\'' || character == '"'){
-            if(found_sep){
-                break;
+        if(character == separator && in_token){
+            int s_len = i - token_start + 1;
+            
+            tokens[token_index] = (char*)malloc(s_len);
+            strncpy(tokens[token_index],line + token_start,s_len - 1);
+            tokens[token_index++][s_len - 1] = '\0';
+
+            in_token = 0;
+            token_start = i;
+            
+        }else if(character != separator){
+            if(!in_token){
+                token_start = i;
+                in_token = 1;
             }
-            found_sep = 1;
-        }else  {
-            add_char(term,character);
+        }
+
+        if(in_token && i == line_length - 1){
+            int len = line_length - token_start;
+
+            tokens[token_index] = (char*)malloc(len+1);
+            strncpy(tokens[token_index],line + token_start,len);
+            tokens[token_index++][len] = '\0';
+        }
+
+    }
+    return token_index;
+}
+
+void print_tokens(char* tokens[],int n){
+    for(int i=0;i<n;i++){
+        printf("[%s] ",tokens[i]);
+        free(tokens[i]);
+    }
+    printf("\n");
+}
+
+#define HOME "/home/user"
+char CWD[128] = HOME;
+char OLDPWD[128] = {'\0'};
+
+void parent_dir(char path[]){
+    if(strcmp(path,"/") == 0)
+        return;
+    
+    for(int i=strlen(path) - 1;i>=0;i--){
+        if(path[i] == '/'){
+            if(i != 0){
+                path[i] = '\0';
+                return;
+            }
         }
     }
+
+    path[0] = '/';
+    path[1] = '\0';
 }
 
-void trim_leading_tabs(char* s){
-    int i=0,j=0;
+void add_dir_to_path(char path[],char* dir){
+    int path_length = strlen(path);
+    int dir_length = strlen(dir);
 
-    while(s[i] == '\t') i++;
+    int offset = 0;
+    if(path_length != 1){
+        path[path_length] = '/';
+        offset = path_length + 1;
+    }else{
+        offset = path_length;
+    }
 
-    while(s[j++] = s[i++]);
-
+    strncpy(path+offset,dir,dir_length);
+    path[offset + dir_length] = '\0';
 }
 
-void parse_here_docs(char* lines[],int n){
-
-    Redir redir = None;
-    char term[128] = {'\0'};
-    int term_idx = 0;
+void parse_path_tokens(char* tokens[],int n){
 
     for(int i=0;i<n;i++){
-        char* line = lines[i];
-        
-        if(redir == None){
-            redir = parse_cmd(line,&term_idx);
-            printf("CMD %s\n",line);
-            printf("BODY:\n");
-        }
-        
-        switch(redir){
-            case None:    
-                printf("END\n");
-                break;
-            case Arrow:
-                if(strlen(term) == 0){
-                    extract_terminator(line,term_idx,term);
-                    continue;
-                }
+        char* token = tokens[i];
 
-                if(strcmp(term,line) == 0){
-                    printf("END\n");
-                    redir = None;
-                }else{
-                    printf("%s\n",line);
-                }
-                
-                break;
-            case LineArrow:
-                if(strlen(term) == 0){
-                    extract_terminator(line,term_idx,term);
-                    trim_leading_tabs(term);
-                    continue;
-                }
-
-                if(strcmp(term,line) == 0){
-                    printf("END\n");
-                    redir = None;
-                }else{
-                    trim_leading_tabs(line);
-                    printf("%s\n",line);
-                }
-
-                break;
+        if(strcmp(token,".") == 0){
+            continue;
+        }else if(strcmp(token,"..") == 0){
+            parent_dir(CWD);           
+        }else{
+            add_dir_to_path(CWD,token);
         }
     }
 
 }
 
-void free_strings(char* strings[],int n){
-    for(int i=0;i<n;i++)
-        free(strings[i]);
+void pwd(){
+    printf("%s\n",CWD);
 }
+
+void cd(char* tokens[],int n){
+    if(n > 2){
+        printf("cd: invalid args");
+        return;
+    }
+
+    char* path = tokens[1];
+    if(n == 1 || strcmp(path,"~") == 0){
+        strcpy(OLDPWD,CWD);
+        strcpy(CWD,HOME);
+    }else if(strcmp(path,"-") == 0){
+        if(!strlen(OLDPWD)){
+            printf("cd: OLDPWD not set\n");
+            return;
+        }else{
+            char temp[128];
+
+            strcpy(temp,CWD);
+            strcpy(CWD,OLDPWD);
+            strcpy(OLDPWD,temp);
+        }
+    }else if(path[0] == '/'){
+        //absolute path
+        strcpy(OLDPWD,CWD);
+        
+        strcpy(CWD,"/");
+
+        char* path_tokens[128];
+        int np = tokenize(path,path_tokens,'/');
+        parse_path_tokens(path_tokens,np);
+        
+    }else{
+        strcpy(OLDPWD,CWD);
+
+        char* path_tokens[128];
+        int np = tokenize(path,path_tokens,'/');
+        parse_path_tokens(path_tokens,np);
+    }
+    pwd();
+}
+
+
+void execute_commands(char* tokens[],int n){
+    char* cmd = tokens[0];
+
+    if(strcmp(cmd,"pwd") == 0){
+        pwd();
+    }else if(strcmp(cmd,"cd") == 0){
+        cd(tokens,n);
+    }else{
+        printf("ERROR: Unknown command\n");
+    }
+}
+
+
+void parse_and_execute_commands(char line[]){
+    char* tokens[128];
+    int n = tokenize(line,tokens,' ');
+    execute_commands(tokens,n);
+}
+
 
 int main(void)
 {
     char line[1024];
-    char *lines[1024];
-    int nolines = 0;
-
-    Redir redir = None;
-    char term[128] = {'\0'};
-    int term_idx = 0;
-
     while (fgets(line, sizeof line, stdin))
     {
-       if(line[strlen(line) - 1] == '\n') 
-            line[strlen(line) - 1] = '\0';
-        
-       if(redir == None){
-            redir = parse_cmd(line,&term_idx);
-            printf("CMD %s\n",line);
-            printf("BODY:\n");
-        }
-        
-        switch(redir){
-            case None:    
-                printf("END\n");
-                break;
-            case Arrow:
-                if(strlen(term) == 0){
-                    extract_terminator(line,term_idx,term);
-                    continue;
-                }
+       int line_length = strlen(line);
+       if(line[line_length - 1] == '\n'){
+            line[line_length - 1] = '\0';
+       }
+       if(line[0] == '\n') continue;
 
-                if(strcmp(term,line) == 0){
-                    printf("END\n");
-                    redir = None;
-                }else{
-                    printf("%s\n",line);
-                }
-                
-                break;
-            case LineArrow:
-                if(strlen(term) == 0){
-                    extract_terminator(line,term_idx,term);
-                    trim_leading_tabs(term);
-                    continue;
-                }
-                trim_leading_tabs(line);
-
-                if(strcmp(term,line) == 0){
-                    printf("END\n");
-                    redir = None;
-                }else{
-                    printf("%s\n",line);
-                }
-
-                break;
-        }
+       parse_and_execute_commands(line);
     }
 
     return 0;
