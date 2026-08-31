@@ -19,12 +19,12 @@ void add_string(char *strings[], char *string, int poz)
     strings[poz][s_len - 1] = '\0';
 }
 
-void copy_string(char *dest, char *src)
+void copy_string(char **dest, char *src)
 {
     int s_len = strlen(src) + 1;
-    dest = (char *)malloc(s_len);
-    strncpy(dest, src, s_len - 1);
-    dest[s_len - 1] = '\0';
+    *dest = (char *)malloc(s_len);
+    strncpy(*dest, src, s_len - 1);
+    (*dest)[s_len - 1] = '\0';
 }
 
 
@@ -77,127 +77,66 @@ void print_tokens(char* tokens[],int n){
     printf("\n");
 }
 
-#define HOME "/home/user"
-char CWD[128] = HOME;
-char OLDPWD[128] = {'\0'};
+typedef struct _VarTabEntry{
+    char* name;
+    char* value;
+} VarTabEntry;
 
-void parent_dir(char path[]){
-    if(strcmp(path,"/") == 0)
-        return;
-    
-    for(int i=strlen(path) - 1;i>=0;i--){
-        if(path[i] == '/'){
-            if(i != 0){
-                path[i] = '\0';
-                return;
-            }
-        }
-    }
+typedef struct _VariableTable{
+    VarTabEntry entries[128];
+    int idx;
+} VariableTable;
 
-    path[0] = '/';
-    path[1] = '\0';
+VariableTable VAR_TABLE;
+
+void add_var_to_table(char* name,char *value){
+    copy_string(&VAR_TABLE.entries[VAR_TABLE.idx].name,name);
+    copy_string(&VAR_TABLE.entries[VAR_TABLE.idx++].value,value);
 }
 
-void add_dir_to_path(char path[],char* dir){
-    int path_length = strlen(path);
-    int dir_length = strlen(dir);
-
-    int offset = 0;
-    if(path_length != 1){
-        path[path_length] = '/';
-        offset = path_length + 1;
-    }else{
-        offset = path_length;
+void print_table(){
+    for(int i=0;i<VAR_TABLE.idx;i++){
+        printf("[%s] -> [%s]\n",VAR_TABLE.entries[i].name,VAR_TABLE.entries[i].value);
     }
-
-    strncpy(path+offset,dir,dir_length);
-    path[offset + dir_length] = '\0';
 }
 
-void parse_path_tokens(char* tokens[],int n){
-
-    for(int i=0;i<n;i++){
-        char* token = tokens[i];
-
-        if(strcmp(token,".") == 0){
-            continue;
-        }else if(strcmp(token,"..") == 0){
-            parent_dir(CWD);           
-        }else{
-            add_dir_to_path(CWD,token);
-        }
+void free_table(){
+    for(int i=0;i<VAR_TABLE.idx;i++){
+        free(VAR_TABLE.entries[i].name);
+        free(VAR_TABLE.entries[i].value);
     }
-
 }
 
-void pwd(){
-    printf("%s\n",CWD);
-}
-
-void cd(char* tokens[],int n){
-    if(n > 2){
-        printf("cd: invalid args");
-        return;
-    }
-
-    char* path = tokens[1];
-    if(n == 1 || strcmp(path,"~") == 0){
-        strcpy(OLDPWD,CWD);
-        strcpy(CWD,HOME);
-    }else if(strcmp(path,"-") == 0){
-        if(!strlen(OLDPWD)){
-            printf("cd: OLDPWD not set\n");
-            return;
-        }else{
-            char temp[128];
-
-            strcpy(temp,CWD);
-            strcpy(CWD,OLDPWD);
-            strcpy(OLDPWD,temp);
-        }
-    }else if(path[0] == '/'){
-        //absolute path
-        strcpy(OLDPWD,CWD);
-        
-        strcpy(CWD,"/");
-
-        char* path_tokens[128];
-        int np = tokenize(path,path_tokens,'/');
-        parse_path_tokens(path_tokens,np);
-        
-    }else{
-        strcpy(OLDPWD,CWD);
-
-        char* path_tokens[128];
-        int np = tokenize(path,path_tokens,'/');
-        parse_path_tokens(path_tokens,np);
-    }
-    pwd();
-}
-
-
-void execute_commands(char* tokens[],int n){
+void execute_command(char* tokens[],int n){
     char* cmd = tokens[0];
 
-    if(strcmp(cmd,"pwd") == 0){
-        pwd();
-    }else if(strcmp(cmd,"cd") == 0){
-        cd(tokens,n);
+    if(strcmp(cmd,"SET") == 0){
+        if(n != 3){
+            printf("ERROR: Invalid arguments for SET\n");
+            return;
+        }
+
+        char* name = tokens[1];
+        char* value = tokens[2];
+
+        add_var_to_table(name,value);
     }else{
         printf("ERROR: Unknown command\n");
     }
 }
 
-
-void parse_and_execute_commands(char line[]){
+void parse_and_execute_command(char line[]){
     char* tokens[128];
     int n = tokenize(line,tokens,' ');
-    execute_commands(tokens,n);
+    execute_command(tokens,n);
+    print_table();
 }
 
 
 int main(void)
 {
+    VAR_TABLE.idx = 0;
+
     char line[1024];
     while (fgets(line, sizeof line, stdin))
     {
@@ -206,9 +145,10 @@ int main(void)
             line[line_length - 1] = '\0';
        }
        if(line[0] == '\n') continue;
-
-       parse_and_execute_commands(line);
+       parse_and_execute_command(line);
     }
+
+    free_table();
 
     return 0;
 }
