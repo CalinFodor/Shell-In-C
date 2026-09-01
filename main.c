@@ -52,7 +52,7 @@ void print_tokens(char* tokens[],int n){
 typedef struct _VarTabEntry{
     char* name;
     char* value;
-
+    bool removed;
 } VarTabEntry;
 
 typedef struct _VariableTable{
@@ -64,22 +64,35 @@ VariableTable VAR_TABLE;
 
 void add_var_to_table(char* name,char *value){
     copy_string(&VAR_TABLE.entries[VAR_TABLE.idx].name,name,strlen(name));
-    copy_string(&VAR_TABLE.entries[VAR_TABLE.idx++].value,value,strlen(value));
+    copy_string(&VAR_TABLE.entries[VAR_TABLE.idx].value,value,strlen(value));
+    VAR_TABLE.entries[VAR_TABLE.idx++].removed = false;
 }
 
 void get_var_value_from_table(char* name,char** value){
     for(int i=0;i<VAR_TABLE.idx;i++){
         char* key = VAR_TABLE.entries[i].name;
         char* key_value = VAR_TABLE.entries[i].value;
-        if(strcmp(name,key) == 0){
+        bool removed = VAR_TABLE.entries[i].removed;
+        if(strcmp(name,key) == 0 && !removed){
             copy_string(value,key_value,strlen(key_value));
+        }    
+    }
+}
+
+void remove_var_from_table(char* name){
+    for(int i=0;i<VAR_TABLE.idx;i++){
+        char* key = VAR_TABLE.entries[i].name;
+        char* key_value = VAR_TABLE.entries[i].value;
+        if(strcmp(name,key) == 0){
+            VAR_TABLE.entries[i].removed = true;
         }    
     }
 }
 
 void print_table(){
     for(int i=0;i<VAR_TABLE.idx;i++){
-        printf("[%s] -> [%s]\n",VAR_TABLE.entries[i].name,VAR_TABLE.entries[i].value);
+        if(!VAR_TABLE.entries[i].removed)
+            printf("[%s] -> [%s]\n",VAR_TABLE.entries[i].name,VAR_TABLE.entries[i].value);
     }
 }
 
@@ -98,6 +111,13 @@ void set(char argv[]){
     get_one_token(argv + offset,&value);
 
     add_var_to_table(name,value);
+}
+
+void unset(char argv[]){
+    char* name = NULL;
+    get_one_token(argv,&name);
+
+    remove_var_from_table(name);
 }
 
 typedef enum _ExpandForm{
@@ -137,8 +157,6 @@ void expand_token(char* token){
 
             if(value != NULL){
                 printf("%s",value);
-            }else{
-                printf(" ");
             }
             break;
         case NormalCurly:
@@ -156,7 +174,7 @@ void expand_token(char* token){
         case DoubleDot:
             copy_string(&var_name,token+2,strlen(token) - 2);
             int double_dot_pos = strchr(token,':') - token;
-            var_name[strlen(var_name) - double_dot_pos - 1] = '\0';
+            var_name[double_dot_pos - 2] = '\0';
 
             get_var_value_from_table(var_name,&value);
 
@@ -184,7 +202,7 @@ void expand_token(char* token){
             if(val_len){
                 printf("%d",val_len);
             }else{
-                printf("0 ");
+                printf("0");
             }
             break;
     }
@@ -213,7 +231,7 @@ void expand(char argv[]){
         }else if( (curly_brace && character == '}') || (in_token && !isalpha(character) && !curly_brace) || (in_token && i == argv_len -1)){
             int token_len = i - token_start;
 
-            if(curly_brace){
+            if(curly_brace || isalpha(character)){
                 token_len++;
             }
 
@@ -226,6 +244,7 @@ void expand(char argv[]){
 
             curly_brace = 0;
             in_token = 0;
+            token_start = i+1;
 
             if(!isalpha(character) && character != '}'){
                 printf("%c",character);
@@ -247,18 +266,17 @@ void execute_command(char line[]){
 
     if(strcmp(cmd,"SET") == 0){
         set(line+offset);
-        print_table();
     }
     else if(strcmp(cmd,"EXPAND") == 0){
         expand(line+offset);
-    }else{
+    }else if(strcmp(cmd,"UNSET") == 0){
+        unset(line+offset);
+    }
+    else{
         printf("ERROR: Unknown command\n");
     }
 }
 
-void parse_and_execute_command(char line[]){
-    execute_command(line);
-}
 
 
 int main(void)
@@ -275,7 +293,8 @@ int main(void)
             line[line_length - 1] = '\0';
        }
        if(line[0] == '\n') continue;
-       parse_and_execute_command(line);
+
+       execute_command(line);
     }
 
     free_table();
