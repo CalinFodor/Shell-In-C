@@ -28,14 +28,6 @@ char* copy_string(char *src,int len)
     return dest;
 }
 
-char* substring(char* string,int n){
-    int len = strlen(string) - n;
-    char* substr = (char*)malloc(len + 1);
-    strncpy(substr,string + n,len);
-    substr[len] = '\0';
-
-    return substr;
-}
 
 int get_one_token(char line[],char** token){
     char* space_ptr = strchr(line,' ');
@@ -108,11 +100,41 @@ void set(char argv[]){
     add_var_to_table(name,value);
 }
 
-int parse_cmd_sub(char argv[],int offset){
-
+char* echo(char* text){
+    return text;
 }
 
-int parse_var_ref(char argv[],int offset){
+char* upper(char* text){
+    char* upper_text = copy_string(text,strlen(text));
+    int s_len = strlen(upper_text);
+    for(int i=0;i<s_len;i++){
+        upper_text[i] = toupper(upper_text[i]);
+    }
+    return upper_text;
+}
+
+int get_num_len(int n){
+    int i=0;
+    while(n){
+        i++;
+        n = n / 10;
+    }
+    return i; 
+}
+
+char* len(char* text){
+    int num = strlen(text);
+    int num_len = get_num_len(num);
+    char* res = (char*)malloc(num_len+1);
+
+    sprintf(res,"%d",num);
+    res[num_len] = '\0';
+    return res;
+}
+
+
+
+int parse_var_ref(char argv[],int offset,char** value){
     bool curly_brace = false;
     if(argv[1] == '{'){
         offset++;
@@ -133,22 +155,101 @@ int parse_var_ref(char argv[],int offset){
     }
 
     char* var_name = copy_string(argv+offset+1,var_end - offset);
-    char* value = get_var_value_from_table(var_name);
-
-    if(value != NULL)
-        printf("%s",value);
+    *value = get_var_value_from_table(var_name);
     
     int result = var_end + 1;
     if(curly_brace) result++;
+
     return result;
 
 }
+
+int parse_cmd_sub(char argv[],int offset,char** value){
+
+    int argv_len = strlen(argv);
+    int command_end = 0;
+
+    char* commands[128];
+    int commands_idx = 0;
+    int paranthesis = 0;
+
+    char* command_arg = NULL;
+
+    int end = 0;
+
+    int i=offset;
+    int command_start = i;
+    int arg_start = i;
+
+    bool in_command = false;
+    bool in_arg = false;
+
+    //first symbol is $
+    while(i<argv_len)
+    {
+        char character = argv[i];
+
+        if(character == ' '){
+            int command_len = i - command_start;
+            commands[commands_idx++] = copy_string(argv+command_start,command_len);
+            command_start = i+1;
+            in_command = false;
+        }else if(character == '$'){
+            char next_character = argv[i+1];
+            if(next_character != '('){
+                //its an expandable variable if no (
+                i = parse_var_ref(argv,i,&command_arg) - 1;
+            }else{
+                paranthesis++;
+                command_start += 2;
+                i++;
+                in_command = true;
+            }
+        }else if(character == ')'){
+            paranthesis--;
+            if(in_arg){
+                in_arg = false;
+                command_arg = copy_string(argv+arg_start,i - arg_start);
+            }
+
+            if(paranthesis == 0){
+                end = i;
+                break;
+            }
+        }else if(!in_command && !in_arg){
+            arg_start = i;
+            in_arg = true;
+        }
+        i++;
+    }
+
+    //pop commands from the stack
+    for(int i=commands_idx - 1;i>=0;i--){
+        char* command = commands[i];
+
+        if(strcmp(command,"echo") == 0){
+            command_arg = echo(command_arg);
+        }else if(strcmp(command,"upper") == 0){
+            command_arg = upper(command_arg);
+        }else if(strcmp(command,"len") == 0) {
+            command_arg = len(command_arg);
+        }else{
+            command_arg = NULL;
+        }
+    }
+    *value = command_arg;
+
+    return end+1;
+    
+}
+
 
 void expand(char argv[]){
 
     int argv_len = strlen(argv);
     int i=0;
-    
+    char* value = NULL;
+
     while(i<argv_len){
         char character = argv[i];
         if(character != '$'){
@@ -156,15 +257,19 @@ void expand(char argv[]){
             i++;
         }else{
             if(i != argv_len - 1){
-                char next_character = argv[i];
+                char next_character = argv[i+1];
                 if(next_character == '('){
-                    i = parse_cmd_sub(argv,i);
+                    i = parse_cmd_sub(argv,i,&value);
                 }else{
-                    i = parse_var_ref(argv,i);
+                    i = parse_var_ref(argv,i,&value);
+                }
+                if(value != NULL){
+                    printf("%s",value);
+                    free(value);
+                    value = NULL;
                 }
             }
         }
-
     }
     printf("\n");
 
@@ -176,12 +281,11 @@ void execute_command(char line[]){
 
     if(strcmp(cmd,"SET") == 0){
         set(line+offset);
-        print_table();
+        //print_table();
     }
     else if(strcmp(cmd,"EXPAND") == 0){
         expand(line+offset);
-    }
-    else{
+    }else{
         printf("ERROR: Unknown command\n");
     }
 }
