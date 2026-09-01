@@ -26,262 +26,162 @@ void copy_string(char **dest, char *src,int len)
     (*dest)[len] = '\0';
 }
 
-int get_one_token(char line[],char** token){
-    char* space_ptr = strchr(line,' ');
+char* substring(char* string,int n){
+    int len = strlen(string) - n;
+    char* substr = (char*)malloc(len + 1);
+    strncpy(substr,string + n,len);
+    substr[len] = '\0';
 
-    if(space_ptr == NULL) {
-        copy_string(token,line,strlen(line));
-        return 0;
+    return substr;
+}
+
+void print_strings(char* strings[],int n){
+    for(int i=0;i<n;i++){
+        printf("%s",strings[i]);
+        if(i != n - 1){
+            printf(" ");
+        }
     }
+    printf("\n");
+}
 
-    int space_poz = space_ptr - line;
+bool is_empty(char* string){
+    return strlen(string) == 0;
+}
 
-    copy_string(token,line,space_poz);
-    return space_poz;
-
+static int myCompare(const void* a, const void* b) 
+{ 
+    return strcmp(*(const char**)a, *(const char**)b); 
 } 
 
-void print_tokens(char* tokens[],int n){
-    for(int i=0;i<n;i++){
-        printf("[%s] ",tokens[i]);
-        free(tokens[i]);
-    }
-    printf("\n");
-}
+void sort(char* arr[], int n) 
+{ 
+    qsort(arr, n, sizeof(char*), myCompare); 
+} 
 
-typedef struct _VarTabEntry{
-    char* name;
-    char* value;
-    bool removed;
-} VarTabEntry;
-
-typedef struct _VariableTable{
-    VarTabEntry entries[128];
+struct FS{
+    char* files[128];
     int idx;
-} VariableTable;
+};
 
-VariableTable VAR_TABLE;
+struct FS FILE_SYSTEM;
 
-void add_var_to_table(char* name,char *value){
-    copy_string(&VAR_TABLE.entries[VAR_TABLE.idx].name,name,strlen(name));
-    copy_string(&VAR_TABLE.entries[VAR_TABLE.idx].value,value,strlen(value));
-    VAR_TABLE.entries[VAR_TABLE.idx++].removed = false;
+void add_file(char filename[]){
+    add_string(FILE_SYSTEM.files,filename,FILE_SYSTEM.idx++);
 }
 
-void get_var_value_from_table(char* name,char** value){
-    for(int i=0;i<VAR_TABLE.idx;i++){
-        char* key = VAR_TABLE.entries[i].name;
-        char* key_value = VAR_TABLE.entries[i].value;
-        bool removed = VAR_TABLE.entries[i].removed;
-        if(strcmp(name,key) == 0 && !removed){
-            copy_string(value,key_value,strlen(key_value));
-        }    
+bool set_match(char letter,char** pattern_ptr){
+    char* pattern = *pattern_ptr;
+    if(pattern[0] != '[')
+        return false;
+    
+    int pattern_length = strlen(pattern);
+    bool exclude = false;
+
+    //pattern is [<chars>]
+
+    if(pattern[1] == '!'){
+       //exclude the following char
+       exclude = true;
     }
-}
 
-void remove_var_from_table(char* name){
-    for(int i=0;i<VAR_TABLE.idx;i++){
-        char* key = VAR_TABLE.entries[i].name;
-        char* key_value = VAR_TABLE.entries[i].value;
-        if(strcmp(name,key) == 0){
-            VAR_TABLE.entries[i].removed = true;
-        }    
-    }
-}
+    int brac_poz = strchr(pattern,']') - pattern;
+    *pattern_ptr = substring(pattern,brac_poz);
 
-void print_table(){
-    for(int i=0;i<VAR_TABLE.idx;i++){
-        if(!VAR_TABLE.entries[i].removed)
-            printf("[%s] -> [%s]\n",VAR_TABLE.entries[i].name,VAR_TABLE.entries[i].value);
-    }
-}
-
-void free_table(){
-    for(int i=0;i<VAR_TABLE.idx;i++){
-        free(VAR_TABLE.entries[i].name);
-        free(VAR_TABLE.entries[i].value);
-    }
-}
-
-void set(char argv[]){
-    char* name = NULL;
-    char* value = NULL;
-
-    int offset = get_one_token(argv,&name) + 1;
-    get_one_token(argv + offset,&value);
-
-    add_var_to_table(name,value);
-}
-
-void unset(char argv[]){
-    char* name = NULL;
-    get_one_token(argv,&name);
-
-    remove_var_from_table(name);
-}
-
-typedef enum _ExpandForm{
-    NoCurly,
-    NormalCurly,
-    DoubleDot,
-    Length
-}ExpandForm;
-
-void expand_token(char* token){
-    int token_length = strlen(token);
-    int var_name_start = 0;
-
-    ExpandForm expand_form;
-
-    //$var
-    if(token[1] != '{'){
-        expand_form = NoCurly;
-    }else {
-        if(token[2] == '#'){
-            expand_form = Length;
-        }else if(strchr(token,':') != NULL){
-            expand_form = DoubleDot;
-        }else{
-            expand_form = NormalCurly; 
+    for(int i=0;i<brac_poz;i++){
+        if(letter == pattern[i]){
+            return !exclude;
         }
     }
 
-    char* var_name;
-    char* value = NULL;
-
-    switch(expand_form){
-        case NoCurly:
-            copy_string(&var_name,token+1,strlen(token)-1);
-
-            get_var_value_from_table(var_name,&value);
-
-            if(value != NULL){
-                printf("%s",value);
-            }
-            break;
-        case NormalCurly:
-            copy_string(&var_name,token+2,strlen(token)-2);
-            var_name[strlen(var_name) - 1] = '\0';
-
-            get_var_value_from_table(var_name,&value);
-
-            if(value != NULL){
-                printf("%s",value);
-            }else{
-                printf(" ");
-            }    
-            break;
-        case DoubleDot:
-            copy_string(&var_name,token+2,strlen(token) - 2);
-            int double_dot_pos = strchr(token,':') - token;
-            var_name[double_dot_pos - 2] = '\0';
-
-            get_var_value_from_table(var_name,&value);
-
-            char* fallback;
-
-            int fallback_pos = double_dot_pos + 2;
-
-            copy_string(&fallback,token+fallback_pos,strlen(token)-2);
-            fallback[strlen(fallback) - 1] = '\0'; //get rid of '}'
-
-            if(value != NULL){
-                printf("%s",value);
-            }else{
-                printf("%s",fallback);
-            }
-            break;
-        case Length:
-            copy_string(&var_name,token+3,strlen(token)-3);
-            var_name[strlen(var_name) - 1] = '\0';
-
-            get_var_value_from_table(var_name,&value);
-
-            int val_len = strlen(value);
-
-            if(val_len){
-                printf("%d",val_len);
-            }else{
-                printf("0");
-            }
-            break;
-    }
+    return exclude;
+    
 }
 
-void expand(char argv[]){
-    char* token = NULL;
-    int in_token = 0;
-    int token_start = 0;
-    int curly_brace = 0;
+bool dot_check(char* pattern,char* name){
+    if(is_empty(name) || is_empty(pattern))
+        return true;
+    
+    if(pattern[0] == '*' && name[0] == '.')
+        return false;
+    return true;
+}
 
-    int argv_len = strlen(argv);
-    for(int i=0;i<argv_len;i++){
-        char character = argv[i];
+bool match(char* pattern,char* name){
 
-        if(character == '$'){
-            in_token = 1;
-            if(i != argv_len - 2){
-                char next_character = argv[i+1];
-                if(next_character == '{'){
-                    curly_brace = 1;
-                    i++;
-                }
-            }
+    if(is_empty(pattern))
+        return is_empty(name);
+    
+    if(pattern[0] == '*'){
+        return match(substring(pattern,1),name) 
+            || (!is_empty(name) && match(pattern,substring(name,1)));
+    }
+    
+    if(is_empty(name))
+        return false;
+    
+    if(pattern[0] == '?' || pattern[0] == name[0] || set_match(name[0],&pattern)){
+        return match(substring(pattern,1),substring(name,1));
+    }
+    return false;
+}
 
-        }else if( (curly_brace && character == '}') || (in_token && !isalpha(character) && !curly_brace) || (in_token && i == argv_len -1)){
-            int token_len = i - token_start;
+void match_files(char* pattern){
+    char* results[128];
+    int res_idx = 0;
 
-            if(curly_brace || isalpha(character)){
-                token_len++;
-            }
-
-            copy_string(&token,argv + token_start,token_len);
-            expand_token(token);
-            token[0] = '\0';
-
-            free(token);
-            token = NULL;
-
-            curly_brace = 0;
-            in_token = 0;
-            token_start = i+1;
-
-            if(!isalpha(character) && character != '}'){
-                printf("%c",character);
-            }
-
-        }else if(!in_token){
-            token_start++;
-            printf("%c",character);
+    for(int i=0;i<FILE_SYSTEM.idx;i++){
+        char* name = FILE_SYSTEM.files[i];
+        if(dot_check(pattern,name) && match(pattern,name)){
+            add_string(results,name,res_idx++);
         }
+    }
+
+    if(res_idx == 0){
+        printf("%s\n",pattern);
+        return;
+    }
+
+    sort(results,res_idx);
+    print_strings(results,res_idx);
         
-    }
-    printf("\n");
+}
 
+
+void parse_command(char line[],char** cmd,char** argv){
+
+    int space_poz = strchr(line,' ') - line;
+
+    int cmd_len = space_poz;
+    copy_string(cmd,line,space_poz);
+    copy_string(argv,line + space_poz + 1,strlen(line) - space_poz);
 }
 
 void execute_command(char line[]){
     char* cmd = NULL;
-    int offset = get_one_token(line,&cmd) + 1;
+    char* argv = NULL;
 
-    if(strcmp(cmd,"SET") == 0){
-        set(line+offset);
-    }
-    else if(strcmp(cmd,"EXPAND") == 0){
-        expand(line+offset);
-    }else if(strcmp(cmd,"UNSET") == 0){
-        unset(line+offset);
-    }
-    else{
-        printf("ERROR: Unknown command\n");
+    parse_command(line,&cmd,&argv);
+    
+    if(cmd != NULL && argv != NULL){
+        if(strcmp(cmd,"FILE") == 0){
+            add_file(argv);
+        }else if(strcmp(cmd,"MATCH") == 0){
+            match_files(argv);
+        }
+        else{
+            printf("ERROR: Unknown command\n");
+        }
+
+    }else{
+        printf("ERROR: Could not parse\n");
     }
 }
 
-
-
 int main(void)
 {
-    VAR_TABLE.idx = 0;
+
+    FILE_SYSTEM.idx = 0;
 
     char line[1024];
     while (fgets(line, sizeof line, stdin))
@@ -296,8 +196,6 @@ int main(void)
 
        execute_command(line);
     }
-
-    free_table();
 
     return 0;
 }
