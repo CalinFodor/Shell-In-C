@@ -124,18 +124,23 @@ int parse_var_ref(char argv[],int offset){
     for(int i=offset + 1;i<argv_len;i++){
         char character = argv[i];
         if((curly_brace && character == '}') || !isalnum(character) || i == strlen(argv) - 1){
-            var_end = i;
+            var_end = i - 1;
+            if(isalnum(character) && character != '}'){
+                var_end++;
+            }
             break;
         }
     }
 
-    char* var_name = copy_string(argv+offset,var_end - offset);
+    char* var_name = copy_string(argv+offset+1,var_end - offset);
     char* value = get_var_value_from_table(var_name);
 
     if(value != NULL)
         printf("%s",value);
     
-    return var_end;
+    int result = var_end + 1;
+    if(curly_brace) result++;
+    return result;
 
 }
 
@@ -161,6 +166,7 @@ void expand(char argv[]){
         }
 
     }
+    printf("\n");
 
 }
 
