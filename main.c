@@ -19,11 +19,13 @@ void add_string(char *strings[], char *string, int poz)
     strings[poz][s_len - 1] = '\0';
 }
 
-void copy_string(char **dest, char *src,int len)
+char* copy_string(char *src,int len)
 {
-    *dest = (char *)malloc(len+1);
-    strncpy(*dest, src, len);
-    (*dest)[len] = '\0';
+    char* dest = NULL;
+    dest = (char *)malloc(len+1);
+    strncpy(dest, src, len);
+    dest[len] = '\0';
+    return dest;
 }
 
 char* substring(char* string,int n){
@@ -35,6 +37,21 @@ char* substring(char* string,int n){
     return substr;
 }
 
+int get_one_token(char line[],char** token){
+    char* space_ptr = strchr(line,' ');
+
+    if(space_ptr == NULL) {
+        *token = copy_string(line,strlen(line));
+        return 0;
+    }
+
+    int space_poz = space_ptr - line;
+
+    *token = copy_string(line,space_poz);
+    return space_poz;
+
+} 
+
 void print_strings(char* strings[],int n){
     for(int i=0;i<n;i++){
         printf("%s",strings[i]);
@@ -45,143 +62,128 @@ void print_strings(char* strings[],int n){
     printf("\n");
 }
 
-bool is_empty(char* string){
-    return strlen(string) == 0;
-}
+typedef struct _VarTabEntry{
+    char* name;
+    char* value;
+} VarTabEntry;
 
-static int myCompare(const void* a, const void* b) 
-{ 
-    return strcmp(*(const char**)a, *(const char**)b); 
-} 
-
-void sort(char* arr[], int n) 
-{ 
-    qsort(arr, n, sizeof(char*), myCompare); 
-} 
-
-struct FS{
-    char* files[128];
+typedef struct _VariableTable{
+    VarTabEntry entries[128];
     int idx;
-};
+} VariableTable;
 
-struct FS FILE_SYSTEM;
+VariableTable VAR_TABLE;
 
-void add_file(char filename[]){
-    add_string(FILE_SYSTEM.files,filename,FILE_SYSTEM.idx++);
+void add_var_to_table(char* name,char *value){
+    VAR_TABLE.entries[VAR_TABLE.idx].name = copy_string(name,strlen(name));
+    VAR_TABLE.entries[VAR_TABLE.idx++].value = copy_string(value,strlen(value));
 }
 
-bool set_match(char letter,char** pattern_ptr){
-    char* pattern = *pattern_ptr;
-    if(pattern[0] != '[')
-        return false;
-    
-    int pattern_length = strlen(pattern);
-    bool exclude = false;
+char* get_var_value_from_table(char* name){
+    char* value = NULL;
+    for(int i=0;i<VAR_TABLE.idx;i++){
+        char* key = VAR_TABLE.entries[i].name;
+        char* key_value = VAR_TABLE.entries[i].value;
+        if(strcmp(name,key) == 0){
+            value = copy_string(key_value,strlen(key_value));
+            break;
+        }    
+    }
+    return value;
+}
 
-    //pattern is [<chars>]
+void print_table(){
+    for(int i=0;i<VAR_TABLE.idx;i++){
+        printf("[%s] -> [%s]\n",VAR_TABLE.entries[i].name,VAR_TABLE.entries[i].value);
+    }
+}
 
-    if(pattern[1] == '!'){
-       //exclude the following char
-       exclude = true;
+void set(char argv[]){
+    char* name = NULL;
+    char* value = NULL;
+
+    int offset = get_one_token(argv,&name) + 1;
+    get_one_token(argv + offset,&value);
+
+    add_var_to_table(name,value);
+}
+
+int parse_cmd_sub(char argv[],int offset){
+
+}
+
+int parse_var_ref(char argv[],int offset){
+    bool curly_brace = false;
+    if(argv[1] == '{'){
+        offset++;
+        curly_brace = true;
     }
 
-    int brac_poz = strchr(pattern,']') - pattern;
-    *pattern_ptr = substring(pattern,brac_poz);
-
-    for(int i=0;i<brac_poz;i++){
-        if(letter == pattern[i]){
-            return !exclude;
+    int var_end = 0;
+    int argv_len = strlen(argv);
+    for(int i=offset + 1;i<argv_len;i++){
+        char character = argv[i];
+        if((curly_brace && character == '}') || !isalnum(character) || i == strlen(argv) - 1){
+            var_end = i;
+            break;
         }
     }
 
-    return exclude;
+    char* var_name = copy_string(argv+offset,var_end - offset);
+    char* value = get_var_value_from_table(var_name);
+
+    if(value != NULL)
+        printf("%s",value);
     
+    return var_end;
+
 }
 
-bool dot_check(char* pattern,char* name){
-    if(is_empty(name) || is_empty(pattern))
-        return true;
-    
-    if(pattern[0] == '*' && name[0] == '.')
-        return false;
-    return true;
-}
+void expand(char argv[]){
 
-bool match(char* pattern,char* name){
-
-    if(is_empty(pattern))
-        return is_empty(name);
+    int argv_len = strlen(argv);
+    int i=0;
     
-    if(pattern[0] == '*'){
-        return match(substring(pattern,1),name) 
-            || (!is_empty(name) && match(pattern,substring(name,1)));
-    }
-    
-    if(is_empty(name))
-        return false;
-    
-    if(pattern[0] == '?' || pattern[0] == name[0] || set_match(name[0],&pattern)){
-        return match(substring(pattern,1),substring(name,1));
-    }
-    return false;
-}
-
-void match_files(char* pattern){
-    char* results[128];
-    int res_idx = 0;
-
-    for(int i=0;i<FILE_SYSTEM.idx;i++){
-        char* name = FILE_SYSTEM.files[i];
-        if(dot_check(pattern,name) && match(pattern,name)){
-            add_string(results,name,res_idx++);
+    while(i<argv_len){
+        char character = argv[i];
+        if(character != '$'){
+            printf("%c",character);
+            i++;
+        }else{
+            if(i != argv_len - 1){
+                char next_character = argv[i];
+                if(next_character == '('){
+                    i = parse_cmd_sub(argv,i);
+                }else{
+                    i = parse_var_ref(argv,i);
+                }
+            }
         }
+
     }
 
-    if(res_idx == 0){
-        printf("%s\n",pattern);
-        return;
-    }
-
-    sort(results,res_idx);
-    print_strings(results,res_idx);
-        
-}
-
-
-void parse_command(char line[],char** cmd,char** argv){
-
-    int space_poz = strchr(line,' ') - line;
-
-    int cmd_len = space_poz;
-    copy_string(cmd,line,space_poz);
-    copy_string(argv,line + space_poz + 1,strlen(line) - space_poz);
 }
 
 void execute_command(char line[]){
     char* cmd = NULL;
-    char* argv = NULL;
+    int offset = get_one_token(line,&cmd) + 1;
 
-    parse_command(line,&cmd,&argv);
-    
-    if(cmd != NULL && argv != NULL){
-        if(strcmp(cmd,"FILE") == 0){
-            add_file(argv);
-        }else if(strcmp(cmd,"MATCH") == 0){
-            match_files(argv);
-        }
-        else{
-            printf("ERROR: Unknown command\n");
-        }
-
-    }else{
-        printf("ERROR: Could not parse\n");
+    if(strcmp(cmd,"SET") == 0){
+        set(line+offset);
+        print_table();
+    }
+    else if(strcmp(cmd,"EXPAND") == 0){
+        expand(line+offset);
+    }
+    else{
+        printf("ERROR: Unknown command\n");
     }
 }
 
 int main(void)
 {
 
-    FILE_SYSTEM.idx = 0;
+    VAR_TABLE.idx = 0;
 
     char line[1024];
     while (fgets(line, sizeof line, stdin))
