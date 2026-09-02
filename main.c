@@ -49,6 +49,11 @@ int tokenize(char line[],char* tokens[]){
             tokens[token_idx++] = copy_string(line + token_start,token_len);
             in_token = false;
             token_start = i + 1;
+        }else if(character == '>' && line[i+1] != '>'){
+            int token_len = i - token_start + 1;
+            tokens[token_idx++] = copy_string(line+token_start,token_len);
+            in_token = false;
+            token_start = i+1;
         }else if(character == ' '){
             token_start++;
         }else if(!in_token){
@@ -64,63 +69,98 @@ int tokenize(char line[],char* tokens[]){
 
 }
 
-bool is_pipe(char* s){
-    return (strcmp(s,"|") == 0);
-}
+int FD = 100;
 
-int count_pipes(char* tokens[],int n){
-    int count = 0;
-    for(int i=0;i<n;i++){
-        if(is_pipe(tokens[i])){
-            count++;
+typedef enum _RedirDir{
+    Input,
+    Output
+}RedirDir;
+
+typedef enum _ModifyFlag{
+    Trunc,
+    Append
+}ModifyFlag;
+
+
+
+typedef struct  _RedirInfo{
+    RedirDir redir_dir;
+    ModifyFlag modify_flag;
+    int fd;
+} RedirInfo;
+
+RedirInfo parse_redir_operator(char* redir_operator){
+    RedirInfo redir_info;
+
+    int arrow_start = 0;
+    int op_len = strlen(redir_operator);
+
+    bool custom_fd = false;
+    if(isdigit(redir_operator[0])){
+        redir_info.fd = redir_operator[0] - '0';
+        arrow_start = 1;
+        custom_fd = true;
+    }
+
+    if(redir_operator[arrow_start] == '>'){
+        redir_info.redir_dir = Output;
+        if(redir_operator[arrow_start + 1] == '>'){
+            redir_info.modify_flag = Append;
+        }else{
+            redir_info.modify_flag = Trunc;
+        }
+
+        if(!custom_fd){
+            redir_info.fd = 1;
+        }
+    }else if(redir_operator[arrow_start] == '<'){
+        redir_info.redir_dir = Input;
+
+        if(!custom_fd){
+            redir_info.fd = 0;
         }
     }
-    return count;
+
+    return redir_info;    
+
 }
 
-
-void pipe_plan(char line[]){
+void redirect_plan(char line[]){
     char* tokens[128];
-    int n_tokens = tokenize(line,tokens);
+    int n = tokenize(line,tokens);
 
-    int pipe_count = count_pipes(tokens,n_tokens);
+    char* redirect_operator = tokens[0];
+    char* file = tokens[1];
 
-    int n = 2*pipe_count-1;
+    RedirInfo redir_info = parse_redir_operator(redirect_operator);
 
-    int cmd_i = 0;
-    bool in_command = false;
-    for(int i=0;i<n_tokens;i++){
-        char* token = tokens[i];
-        if(!in_command && !is_pipe(token)){
-            printf("CMD %d %s\n",cmd_i,token);
-            in_command = true;
-            if(pipe_count == 0){
+    if(file[0] == '&'){
+        int old_fd = file[1] - '0';
+        int new_fd = redir_info.fd;
+        printf("DUP2 %d %d\n",old_fd,new_fd);
+    }else{
+        switch(redir_info.redir_dir){
+            case Input:
+                printf("OPEN %s RDONLY -> fd %d\n",file,FD);
+                printf("DUP2 %d %d\n",FD,redir_info.fd);
                 break;
-            }
+            case Output:
+                printf("OPEN %s WRONLY|CREAT|",file);    
+
+                if(redir_info.modify_flag == Trunc){
+                   printf("TRUNC"); 
+                }else{
+                   printf("APPEND"); 
+                }   
+
+                printf(" -> fd %d\n",FD);
+                printf("DUP2 %d %d\n",FD,redir_info.fd);
+                break;
         }
 
-        if(is_pipe(token) || i == n_tokens - 1){
-            int in_dup2 = 10 + 2*(cmd_i - 1);
-            int out_dup2 = 11 + 2*cmd_i;
-
-            //first pipe not dup2 stdin
-            if(cmd_i != 0){
-                printf("  DUP2 %d 0\n",in_dup2);
-            }
-
-            //last pipe not dup2 stdout
-            if(cmd_i != pipe_count){
-                printf("  DUP2 %d 1\n",out_dup2);
-            }
-            
-          
-            for(int i=0;i<=n;i++){
-                printf("  CLOSE %d\n",10+i);
-            }
-            cmd_i++;
-            in_command = false;
-        }
+        printf("CLOSE %d\n",FD);
     }
+    FD++;
 }
 
 int main(void)
@@ -136,7 +176,7 @@ int main(void)
             line[line_length - 1] = '\0';
        }
        if(line[0] == '\n') continue;
-       pipe_plan(line);
+       redirect_plan(line);
     }
 
     return 0;
