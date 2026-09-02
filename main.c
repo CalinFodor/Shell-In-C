@@ -64,192 +64,67 @@ int tokenize(char line[],char* tokens[]){
 
 }
 
-typedef enum _ProcStatus{
-    Running,
-    Zombie,
-    Reaped
-} ProcStatus;
-
-typedef struct _ProcTableEntry{
-    int pid;
-    int parent_pid;
-    ProcStatus status;
-    char* program;
-    int exit_code;
-} ProcTableEntry;
-
-
-typedef struct _ProcTable{
-    ProcTableEntry table[128];
-    int i;
-} ProcTable;
-
-ProcTable PROC_TABLE;
-
-void FORK(int parent_pid,int pid){
-    ProcTableEntry new_entry;
-
-    bool found_parent = false;
-    int entries = PROC_TABLE.i;
-    for(int i=0;i<entries;i++){
-        ProcTableEntry entry = PROC_TABLE.table[i];
-        if(entry.pid == parent_pid){
-            found_parent = true;
-            new_entry.program = copy_string(entry.program,strlen(entry.program));
-        }
-    }
-
-    if(!found_parent){
-        printf("FORK: Could not find parent\n");
-        return;
-    }
-
-    new_entry.parent_pid = parent_pid;
-    new_entry.pid = pid;
-    new_entry.status = Running;
-    new_entry.exit_code = -1;
-
-    PROC_TABLE.table[PROC_TABLE.i++] = new_entry;
+bool is_pipe(char* s){
+    return (strcmp(s,"|") == 0);
 }
 
-void EXEC(int pid,char* prog){
-
-    int entries = PROC_TABLE.i;
-    for(int i=0;i<entries;i++){
-        ProcTableEntry entry = PROC_TABLE.table[i];
-        if(pid == entry.pid){
-            PROC_TABLE.table[i].program = copy_string(prog,strlen(prog));
-            return;
+int count_pipes(char* tokens[],int n){
+    int count = 0;
+    for(int i=0;i<n;i++){
+        if(is_pipe(tokens[i])){
+            count++;
         }
     }
-
-    printf("EXEC: Could not find pid\n");
+    return count;
 }
 
-void EXIT(int pid,int code){
-    int entries = PROC_TABLE.i;
-    for(int i=0;i<entries;i++){
-        ProcTableEntry entry = PROC_TABLE.table[i];
-        if(pid == entry.pid){
-            PROC_TABLE.table[i].exit_code = code;
-            PROC_TABLE.table[i].status = Zombie;
-            return;
-        }
-    }
-    printf("EXIT: Could not find pid\n");
-}
 
-void WAIT(int pid,int child){
-    int entries = PROC_TABLE.i;
-    for(int i=0;i<entries;i++){
-        ProcTableEntry entry = PROC_TABLE.table[i];
-        if(pid == entry.parent_pid && child == entry.pid){
-            if(entry.status == Zombie){
-                PROC_TABLE.table[i].status = Reaped;
-                printf("%d\n",entry.exit_code);
-                return;
-            }
-        }
-    }
-    printf("-1\n");
-}
-
-void STATUS(int pid){
-    int entries = PROC_TABLE.i;
-    for(int i=0;i<entries;i++){
-        ProcTableEntry entry = PROC_TABLE.table[i];
-        if(pid == entry.pid){
-            char status[128] = {'\0'};
-
-            switch(entry.status){
-                case Running:
-                    strcpy(status,"running");
-                    break;
-                case Zombie:
-                    strcpy(status,"zombie");
-                    break;
-                case Reaped:
-                    strcpy(status,"reaped");
-                    break;
-            }
-
-            printf("%s prog=%s\n",status,entry.program);
-            return;
-        }
-    }
-    printf("unknown prog=?\n");
-}
-
-void execute_command(char line[]){
-   
+void pipe_plan(char line[]){
     char* tokens[128];
     int n_tokens = tokenize(line,tokens);
 
-    if(n_tokens < 1){
-        return;
-    }
+    int pipe_count = count_pipes(tokens,n_tokens);
 
-    char* cmd = tokens[0];
+    int n = 2*pipe_count-1;
 
-    if(cmd != NULL){
-        if(equal_strings(cmd,"FORK")){
-            if(n_tokens >= 3){
-                int parent = atoi(tokens[1]);
-                int child = atoi(tokens[2]);
-                FORK(parent,child);
+    int cmd_i = 0;
+    bool in_command = false;
+    for(int i=0;i<n_tokens;i++){
+        char* token = tokens[i];
+        if(!in_command && !is_pipe(token)){
+            printf("CMD %d %s\n",cmd_i,token);
+            in_command = true;
+            if(pipe_count == 0){
+                break;
             }
-        }else if(equal_strings(cmd,"EXEC")){
-            if(n_tokens >= 3){
-                int pid = atoi(tokens[1]);
-                char* prog = tokens[2];
-                EXEC(pid,prog);
+        }
+
+        if(is_pipe(token) || i == n_tokens - 1){
+            int in_dup2 = 10 + 2*(cmd_i - 1);
+            int out_dup2 = 11 + 2*cmd_i;
+
+            //first pipe not dup2 stdin
+            if(cmd_i != 0){
+                printf("  DUP2 %d 0\n",in_dup2);
             }
-        }else if(equal_strings(cmd,"EXIT")){
-            if(n_tokens >= 3){
-                int pid = atoi(tokens[1]);
-                int code = atoi(tokens[2]);
-                EXIT(pid,code);
+
+            //last pipe not dup2 stdout
+            if(cmd_i != pipe_count){
+                printf("  DUP2 %d 1\n",out_dup2);
             }
             
-        }else if(equal_strings(cmd,"WAIT")){
-            if(n_tokens >= 3){
-                int pid = atoi(tokens[1]);
-                int child = atoi(tokens[2]);
-                WAIT(pid,child);
+          
+            for(int i=0;i<=n;i++){
+                printf("  CLOSE %d\n",10+i);
             }
-
-        }else if(equal_strings(cmd,"STATUS")){
-            if(n_tokens >= 2){
-                int pid = atoi(tokens[1]);
-                STATUS(pid);
-            }
-        }else{
-            printf("ERROR: Unknown command\n");
+            cmd_i++;
+            in_command = false;
         }
     }
-
-}
-
-
-void init_table(){
-    PROC_TABLE.i = 0;
-
-    char program_name[] = "shell";
-
-    ProcTableEntry entry;
-    entry.exit_code = -1;
-    entry.parent_pid = -1;
-    entry.pid = 0;
-    entry.status = Running;
-
-    entry.program = copy_string(program_name,strlen(program_name));
-
-    PROC_TABLE.table[PROC_TABLE.i++] = entry;
 }
 
 int main(void)
 {
-    init_table();
 
     char line[1024];
     while (fgets(line, sizeof line, stdin))
@@ -261,8 +136,7 @@ int main(void)
             line[line_length - 1] = '\0';
        }
        if(line[0] == '\n') continue;
-
-       execute_command(line);
+       pipe_plan(line);
     }
 
     return 0;
