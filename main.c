@@ -28,272 +28,228 @@ char* copy_string(char *src,int len)
     return dest;
 }
 
-
-int get_one_token(char line[],char** token){
-    char* space_ptr = strchr(line,' ');
-
-    if(space_ptr == NULL) {
-        *token = copy_string(line,strlen(line));
-        return 0;
-    }
-
-    int space_poz = space_ptr - line;
-
-    *token = copy_string(line,space_poz);
-    return space_poz;
-
-} 
-
-void print_strings(char* strings[],int n){
-    for(int i=0;i<n;i++){
-        printf("%s",strings[i]);
-        if(i != n - 1){
-            printf(" ");
-        }
-    }
-    printf("\n");
+bool equal_strings(char* one,char* two){
+    return (strcmp(one,two) == 0);
 }
 
-typedef struct _VarTabEntry{
-    char* name;
-    char* value;
-} VarTabEntry;
-
-typedef struct _VariableTable{
-    VarTabEntry entries[128];
-    int idx;
-} VariableTable;
-
-VariableTable VAR_TABLE;
-
-void add_var_to_table(char* name,char *value){
-    VAR_TABLE.entries[VAR_TABLE.idx].name = copy_string(name,strlen(name));
-    VAR_TABLE.entries[VAR_TABLE.idx++].value = copy_string(value,strlen(value));
-}
-
-char* get_var_value_from_table(char* name){
-    char* value = NULL;
-    for(int i=0;i<VAR_TABLE.idx;i++){
-        char* key = VAR_TABLE.entries[i].name;
-        char* key_value = VAR_TABLE.entries[i].value;
-        if(strcmp(name,key) == 0){
-            value = copy_string(key_value,strlen(key_value));
-            break;
-        }    
-    }
-    return value;
-}
-
-void print_table(){
-    for(int i=0;i<VAR_TABLE.idx;i++){
-        printf("[%s] -> [%s]\n",VAR_TABLE.entries[i].name,VAR_TABLE.entries[i].value);
-    }
-}
-
-void set(char argv[]){
-    char* name = NULL;
-    char* value = NULL;
-
-    int offset = get_one_token(argv,&name) + 1;
-    get_one_token(argv + offset,&value);
-
-    add_var_to_table(name,value);
-}
-
-char* echo(char* text){
-    return text;
-}
-
-char* upper(char* text){
-    char* upper_text = copy_string(text,strlen(text));
-    int s_len = strlen(upper_text);
-    for(int i=0;i<s_len;i++){
-        upper_text[i] = toupper(upper_text[i]);
-    }
-    return upper_text;
-}
-
-int get_num_len(int n){
-    int i=0;
-    while(n){
-        i++;
-        n = n / 10;
-    }
-    return i; 
-}
-
-char* len(char* text){
-    int num = strlen(text);
-    int num_len = get_num_len(num);
-    char* res = (char*)malloc(num_len+1);
-
-    sprintf(res,"%d",num);
-    res[num_len] = '\0';
-    return res;
-}
-
-
-
-int parse_var_ref(char argv[],int offset,char** value){
-    bool curly_brace = false;
-    if(argv[1] == '{'){
-        offset++;
-        curly_brace = true;
-    }
-
-    int var_end = 0;
-    int argv_len = strlen(argv);
-    for(int i=offset + 1;i<argv_len;i++){
-        char character = argv[i];
-        if((curly_brace && character == '}') || !isalnum(character) || i == strlen(argv) - 1){
-            var_end = i - 1;
-            if(isalnum(character) && character != '}'){
-                var_end++;
-            }
-            break;
-        }
-    }
-
-    char* var_name = copy_string(argv+offset+1,var_end - offset);
-    *value = get_var_value_from_table(var_name);
+int tokenize(char line[],char* tokens[]){
     
-    int result = var_end + 1;
-    if(curly_brace) result++;
+    int token_idx = 0;
 
-    return result;
+    int line_length = strlen(line);
+
+    bool in_token = false;
+
+    int token_start = 0;
+
+    for(int i=0;i<line_length;i++){
+        char character = line[i];
+        if(character == ' ' && in_token){
+            int token_len = i - token_start;
+            tokens[token_idx++] = copy_string(line + token_start,token_len);
+            in_token = false;
+            token_start = i + 1;
+        }else if(character == ' '){
+            token_start++;
+        }else if(!in_token){
+            in_token = true;
+        }
+    }
+
+    if(in_token){
+        int token_len = line_length - token_start;
+        tokens[token_idx++] = copy_string(line + token_start,token_len);
+    }
+    return token_idx;
 
 }
 
-int parse_cmd_sub(char argv[],int offset,char** value){
+typedef enum _ProcStatus{
+    Running,
+    Zombie,
+    Reaped
+} ProcStatus;
 
-    int argv_len = strlen(argv);
-    int command_end = 0;
+typedef struct _ProcTableEntry{
+    int pid;
+    int parent_pid;
+    ProcStatus status;
+    char* program;
+    int exit_code;
+} ProcTableEntry;
 
-    char* commands[128];
-    int commands_idx = 0;
-    int paranthesis = 0;
 
-    char* command_arg = NULL;
+typedef struct _ProcTable{
+    ProcTableEntry table[128];
+    int i;
+} ProcTable;
 
-    int end = 0;
+ProcTable PROC_TABLE;
 
-    int i=offset;
-    int command_start = i;
-    int arg_start = i;
+void FORK(int parent_pid,int pid){
+    ProcTableEntry new_entry;
 
-    bool in_command = false;
-    bool in_arg = false;
-
-    //first symbol is $
-    while(i<argv_len)
-    {
-        char character = argv[i];
-
-        if(character == ' '){
-            int command_len = i - command_start;
-            commands[commands_idx++] = copy_string(argv+command_start,command_len);
-            command_start = i+1;
-            in_command = false;
-        }else if(character == '$'){
-            char next_character = argv[i+1];
-            if(next_character != '('){
-                //its an expandable variable if no (
-                i = parse_var_ref(argv,i,&command_arg) - 1;
-            }else{
-                paranthesis++;
-                command_start += 2;
-                i++;
-                in_command = true;
-            }
-        }else if(character == ')'){
-            paranthesis--;
-            if(in_arg){
-                in_arg = false;
-                command_arg = copy_string(argv+arg_start,i - arg_start);
-            }
-
-            if(paranthesis == 0){
-                end = i;
-                break;
-            }
-        }else if(!in_command && !in_arg){
-            arg_start = i;
-            in_arg = true;
-        }
-        i++;
-    }
-
-    //pop commands from the stack
-    for(int i=commands_idx - 1;i>=0;i--){
-        char* command = commands[i];
-
-        if(strcmp(command,"echo") == 0){
-            command_arg = echo(command_arg);
-        }else if(strcmp(command,"upper") == 0){
-            command_arg = upper(command_arg);
-        }else if(strcmp(command,"len") == 0) {
-            command_arg = len(command_arg);
-        }else{
-            command_arg = NULL;
+    bool found_parent = false;
+    int entries = PROC_TABLE.i;
+    for(int i=0;i<entries;i++){
+        ProcTableEntry entry = PROC_TABLE.table[i];
+        if(entry.pid == parent_pid){
+            found_parent = true;
+            new_entry.program = copy_string(entry.program,strlen(entry.program));
         }
     }
-    *value = command_arg;
 
-    return end+1;
-    
+    if(!found_parent){
+        printf("FORK: Could not find parent\n");
+        return;
+    }
+
+    new_entry.parent_pid = parent_pid;
+    new_entry.pid = pid;
+    new_entry.status = Running;
+    new_entry.exit_code = -1;
+
+    PROC_TABLE.table[PROC_TABLE.i++] = new_entry;
 }
 
+void EXEC(int pid,char* prog){
 
-void expand(char argv[]){
+    int entries = PROC_TABLE.i;
+    for(int i=0;i<entries;i++){
+        ProcTableEntry entry = PROC_TABLE.table[i];
+        if(pid == entry.pid){
+            PROC_TABLE.table[i].program = copy_string(prog,strlen(prog));
+            return;
+        }
+    }
 
-    int argv_len = strlen(argv);
-    int i=0;
-    char* value = NULL;
+    printf("EXEC: Could not find pid\n");
+}
 
-    while(i<argv_len){
-        char character = argv[i];
-        if(character != '$'){
-            printf("%c",character);
-            i++;
-        }else{
-            if(i != argv_len - 1){
-                char next_character = argv[i+1];
-                if(next_character == '('){
-                    i = parse_cmd_sub(argv,i,&value);
-                }else{
-                    i = parse_var_ref(argv,i,&value);
-                }
-                if(value != NULL){
-                    printf("%s",value);
-                    free(value);
-                    value = NULL;
-                }
+void EXIT(int pid,int code){
+    int entries = PROC_TABLE.i;
+    for(int i=0;i<entries;i++){
+        ProcTableEntry entry = PROC_TABLE.table[i];
+        if(pid == entry.pid){
+            PROC_TABLE.table[i].exit_code = code;
+            PROC_TABLE.table[i].status = Zombie;
+            return;
+        }
+    }
+    printf("EXIT: Could not find pid\n");
+}
+
+void WAIT(int pid,int child){
+    int entries = PROC_TABLE.i;
+    for(int i=0;i<entries;i++){
+        ProcTableEntry entry = PROC_TABLE.table[i];
+        if(pid == entry.parent_pid && child == entry.pid){
+            if(entry.status == Zombie){
+                PROC_TABLE.table[i].status = Reaped;
+                printf("%d\n",entry.exit_code);
+                return;
             }
         }
     }
-    printf("\n");
+    printf("-1\n");
+}
 
+void STATUS(int pid){
+    int entries = PROC_TABLE.i;
+    for(int i=0;i<entries;i++){
+        ProcTableEntry entry = PROC_TABLE.table[i];
+        if(pid == entry.pid){
+            char status[128] = {'\0'};
+
+            switch(entry.status){
+                case Running:
+                    strcpy(status,"running");
+                    break;
+                case Zombie:
+                    strcpy(status,"zombie");
+                    break;
+                case Reaped:
+                    strcpy(status,"reaped");
+                    break;
+            }
+
+            printf("%s prog=%s\n",status,entry.program);
+            return;
+        }
+    }
+    printf("unknown prog=?\n");
 }
 
 void execute_command(char line[]){
-    char* cmd = NULL;
-    int offset = get_one_token(line,&cmd) + 1;
+   
+    char* tokens[128];
+    int n_tokens = tokenize(line,tokens);
 
-    if(strcmp(cmd,"SET") == 0){
-        set(line+offset);
-        //print_table();
+    if(n_tokens < 1){
+        return;
     }
-    else if(strcmp(cmd,"EXPAND") == 0){
-        expand(line+offset);
-    }else{
-        printf("ERROR: Unknown command\n");
+
+    char* cmd = tokens[0];
+
+    if(cmd != NULL){
+        if(equal_strings(cmd,"FORK")){
+            if(n_tokens >= 3){
+                int parent = atoi(tokens[1]);
+                int child = atoi(tokens[2]);
+                FORK(parent,child);
+            }
+        }else if(equal_strings(cmd,"EXEC")){
+            if(n_tokens >= 3){
+                int pid = atoi(tokens[1]);
+                char* prog = tokens[2];
+                EXEC(pid,prog);
+            }
+        }else if(equal_strings(cmd,"EXIT")){
+            if(n_tokens >= 3){
+                int pid = atoi(tokens[1]);
+                int code = atoi(tokens[2]);
+                EXIT(pid,code);
+            }
+            
+        }else if(equal_strings(cmd,"WAIT")){
+            if(n_tokens >= 3){
+                int pid = atoi(tokens[1]);
+                int child = atoi(tokens[2]);
+                WAIT(pid,child);
+            }
+
+        }else if(equal_strings(cmd,"STATUS")){
+            if(n_tokens >= 2){
+                int pid = atoi(tokens[1]);
+                STATUS(pid);
+            }
+        }else{
+            printf("ERROR: Unknown command\n");
+        }
     }
+
+}
+
+
+void init_table(){
+    PROC_TABLE.i = 0;
+
+    char program_name[] = "shell";
+
+    ProcTableEntry entry;
+    entry.exit_code = -1;
+    entry.parent_pid = -1;
+    entry.pid = 0;
+    entry.status = Running;
+
+    entry.program = copy_string(program_name,strlen(program_name));
+
+    PROC_TABLE.table[PROC_TABLE.i++] = entry;
 }
 
 int main(void)
 {
-
-    VAR_TABLE.idx = 0;
+    init_table();
 
     char line[1024];
     while (fgets(line, sizeof line, stdin))
