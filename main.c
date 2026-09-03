@@ -64,63 +64,93 @@ int tokenize(char line[],char* tokens[]){
 
 }
 
-bool starts_with(char* pre,char* str){
-    return strncmp(pre,str,strlen(pre)) == 0;
+typedef enum _State{
+    Prompt,
+    Running,
+    Stopped,
+}State;
+
+State STATE = Prompt;
+
+int fg_pid = 0;
+
+void START(int pid){
+    STATE = Running;
+    fg_pid = pid;
+    printf("started %d\n",pid);
 }
 
-int get_command_exit(char* command){
-
-    if(starts_with("OK",command)){
-        return 0;
-    }else{
-        int exit_code = command[strlen(command) - 1] - '0';
-        return exit_code;
+void EXIT(int pid){
+    if(pid == fg_pid){
+        STATE = Prompt;
+        fg_pid = 0;
+        printf("done %d\n",pid);
     }
 }
 
-bool is_logical_operator(char* token){
-    return equal_strings(token,"||") || equal_strings(token,"&&");
+void STATUS(){
+    char buf[20];
+    switch(STATE){
+        case Prompt:
+            strcpy(buf,"prompt");
+            break;
+        case Running:
+            strcpy(buf,"running");
+            break;
+        case Stopped:
+            strcpy(buf,"stopped");
+            break;
+    }
+
+    printf("state=%s fg=%d\n",buf,fg_pid);
 }
 
-void exit_command_chain(int code){
-    printf("EXIT: %d\n",code);
+void SIGINT(){
+    if(STATE == Prompt){
+        printf("^C\nprompt\n");
+    }else if(STATE == Running){
+        printf("forwarded SIGINT to %d\n",fg_pid);
+    }
 }
 
-void evalute_commands(char line[]){
-    
-    int last_command_exit = -1;
+void SIGSTP(){
+    if(STATE == Running){
+        STATE = Stopped;
+        printf("stopped %d\n",fg_pid);
+    }else if(STATE == Prompt){
+        printf("(no foreground job)\n");
+    }
+}
+
+void SIGTERM(){
+    printf("shell exiting\n");
+    exit(0);
+}
+
+void execute_command(char line[]){
     char* tokens[128];
     int n = tokenize(line,tokens);
-    bool run_command = true;
 
-    printf("RAN:");
-    for(int i=0;i<n;i++){
-        char* token = tokens[i];
+    char* cmd = tokens[0];
 
-        if(is_logical_operator(token)){
-            // || case
-            if(equal_strings(token,"||")){
-                //if last command exit is 0 dont run the next command
-                if(last_command_exit == 0)
-                    run_command = false;
-                else
-                    run_command = true;
-            // && case
-            }else {
-                if (last_command_exit == 0)
-                    run_command = true;
-                else
-                    run_command = false;
-            }
-
-        }else if(run_command){
-            last_command_exit = get_command_exit(token);
-            printf(" %s",token);
-        }
-
+    if(equal_strings(cmd,"START")){
+        int pid = atoi(tokens[1]);
+        START(pid);
+    }else if(equal_strings(cmd,"EXIT")){
+        int pid = atoi(tokens[1]);
+        EXIT(pid);
+    }else if(equal_strings(cmd,"SIGINT")){
+        SIGINT();
+    }else if(equal_strings(cmd,"SIGTSTP")){
+        SIGSTP();
+    }else if(equal_strings(cmd,"SIGTERM")){
+        SIGTERM();
+    }else if(equal_strings(cmd,"STATUS")){
+        STATUS();
     }
-
-    printf("\nEXIT: %d\n",last_command_exit);
+    else {
+        printf("ERROR: Unknown command\n");
+    }
 }
 
 int main(void)
@@ -136,8 +166,8 @@ int main(void)
             line[line_length - 1] = '\0';
        }
        if(line[0] == '\n') continue;
-       evalute_commands(line);
+       execute_command(line);
     }
-
+    
     return 0;
 }
