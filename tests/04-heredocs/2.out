@@ -1,5 +1,0 @@
-CMD cat <<EOF
-BODY:
-hello
-world
-END

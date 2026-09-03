@@ -1,4 +1,0 @@
-cat <<END
-single
-END
-ls

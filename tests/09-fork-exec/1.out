@@ -1,4 +1,0 @@
-running prog=shell
-zombie prog=ls
-0
-reaped prog=ls

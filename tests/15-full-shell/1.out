@@ -1,4 +1,0 @@
-alice
-/tmp
-OK [ls, build.py, main.py] stdout=- pipe=true
-OK [grep, py] stdout=out.txt pipe=false

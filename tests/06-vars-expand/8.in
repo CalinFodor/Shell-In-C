@@ -1,3 +1,0 @@
-SET A x
-UNSET A
-EXPAND [$A]

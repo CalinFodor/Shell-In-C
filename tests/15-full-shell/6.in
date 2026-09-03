@@ -1,4 +1,0 @@
-FILE one.py
-FILE two.py
-
-ls *.py

@@ -1,4 +1,0 @@
-CMD cat <<'EOF'
-BODY:
-$VAR
-END
