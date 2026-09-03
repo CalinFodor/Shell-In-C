@@ -64,98 +64,107 @@ int tokenize(char line[],char* tokens[]){
 
 }
 
-typedef enum _State{
-    Prompt,
-    Running,
-    Stopped,
-}State;
-
-State STATE = Prompt;
-
-int fg_pid = 0;
-
-void START(int pid){
-    STATE = Running;
-    fg_pid = pid;
-    printf("started %d\n",pid);
+bool starts_with(char *str, char *pre)
+{
+    return strncmp(pre, str, strlen(pre)) == 0;
 }
 
-void EXIT(int pid){
-    if(pid == fg_pid){
-        STATE = Prompt;
-        fg_pid = 0;
-        printf("done %d\n",pid);
+bool is_hist_command(char* cmd){
+    return starts_with(cmd,"!") || starts_with(cmd,":");
+}
+
+bool is_number(char* str){
+    int s_len = strlen(str);
+    for(int i=0;i<s_len;i++){
+        if(!isdigit(str[i])){
+            return false;
+        }
+    }
+    return true;
+}
+
+typedef struct _CommandHist{
+    char* commands[128];
+    int idx;
+}CommandHist;
+
+CommandHist COMMAND_HISTORY;
+
+void add_command_to_hist(char* command){
+    add_string(COMMAND_HISTORY.commands,command,COMMAND_HISTORY.idx++);
+}
+
+void print_hist(){
+    int n = COMMAND_HISTORY.idx;
+    for(int i=0;i<n;i++){
+        printf("%d: %s\n",i+1,COMMAND_HISTORY.commands[i]);
     }
 }
 
-void STATUS(){
-    char buf[20];
-    switch(STATE){
-        case Prompt:
-            strcpy(buf,"prompt");
+void print_last_command(){
+    char* last_command = COMMAND_HISTORY.commands[COMMAND_HISTORY.idx - 1];
+    printf("RAN %s\n",last_command);
+    add_command_to_hist(last_command);
+}
+
+void print_n_command(int n){
+    int command_len = COMMAND_HISTORY.idx;
+    for(int i=0;i<command_len;i++){
+        if(i+1 == n){
+            char *cmd = COMMAND_HISTORY.commands[i];
+            printf("RAN %s\n",cmd);
+            add_command_to_hist(cmd);
+            return;
+        }
+    }
+    printf("bash: !%d: event not found\n",n);
+}
+
+void print_match_command(char* str){
+    int command_len = COMMAND_HISTORY.idx;
+    bool found_match = false;
+    for(int i=0;i<command_len;i++){
+        char* cmd = COMMAND_HISTORY.commands[i];
+        if(starts_with(cmd,str)){
+            printf("RAN %s\n",cmd);
+            found_match = true;
+            add_command_to_hist(cmd);
             break;
-        case Running:
-            strcpy(buf,"running");
-            break;
-        case Stopped:
-            strcpy(buf,"stopped");
-            break;
+        }
     }
 
-    printf("state=%s fg=%d\n",buf,fg_pid);
-}
-
-void SIGINT(){
-    if(STATE == Prompt){
-        printf("^C\nprompt\n");
-    }else if(STATE == Running){
-        printf("forwarded SIGINT to %d\n",fg_pid);
-    }
-}
-
-void SIGSTP(){
-    if(STATE == Running){
-        STATE = Stopped;
-        printf("stopped %d\n",fg_pid);
-    }else if(STATE == Prompt){
-        printf("(no foreground job)\n");
-    }
-}
-
-void SIGTERM(){
-    printf("shell exiting\n");
-    exit(0);
+    if(!found_match)
+        printf("bash: !%s: event not found\n",str);
 }
 
 void execute_command(char line[]){
-    char* tokens[128];
-    int n = tokenize(line,tokens);
-
-    char* cmd = tokens[0];
-
-    if(equal_strings(cmd,"START")){
-        int pid = atoi(tokens[1]);
-        START(pid);
-    }else if(equal_strings(cmd,"EXIT")){
-        int pid = atoi(tokens[1]);
-        EXIT(pid);
-    }else if(equal_strings(cmd,"SIGINT")){
-        SIGINT();
-    }else if(equal_strings(cmd,"SIGTSTP")){
-        SIGSTP();
-    }else if(equal_strings(cmd,"SIGTERM")){
-        SIGTERM();
-    }else if(equal_strings(cmd,"STATUS")){
-        STATUS();
+    if(!is_hist_command(line)){
+        add_command_to_hist(line);
+        printf("RAN %s\n",line);
+    }else{
+        if(line[0] == '!'){
+            if(line[1] == '!'){
+               print_last_command();
+            }else if(is_number(line + 1)){
+                int n = atoi(line+1);
+                print_n_command(n);
+            }else{
+                char* str = line + 1;
+                print_match_command(str);
+            }
+        }else{
+            print_hist();
+        }
     }
-    else {
-        printf("ERROR: Unknown command\n");
-    }
+}
+
+void init_hist(){
+    COMMAND_HISTORY.idx = 0;
 }
 
 int main(void)
 {
-
+    init_hist();
     char line[1024];
     while (fgets(line, sizeof line, stdin))
     {
