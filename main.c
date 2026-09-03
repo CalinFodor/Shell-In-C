@@ -49,11 +49,6 @@ int tokenize(char line[],char* tokens[]){
             tokens[token_idx++] = copy_string(line + token_start,token_len);
             in_token = false;
             token_start = i + 1;
-        }else if(character == '>' && line[i+1] != '>'){
-            int token_len = i - token_start + 1;
-            tokens[token_idx++] = copy_string(line+token_start,token_len);
-            in_token = false;
-            token_start = i+1;
         }else if(character == ' '){
             token_start++;
         }else if(!in_token){
@@ -69,98 +64,63 @@ int tokenize(char line[],char* tokens[]){
 
 }
 
-int FD = 100;
-
-typedef enum _RedirDir{
-    Input,
-    Output
-}RedirDir;
-
-typedef enum _ModifyFlag{
-    Trunc,
-    Append
-}ModifyFlag;
-
-
-
-typedef struct  _RedirInfo{
-    RedirDir redir_dir;
-    ModifyFlag modify_flag;
-    int fd;
-} RedirInfo;
-
-RedirInfo parse_redir_operator(char* redir_operator){
-    RedirInfo redir_info;
-
-    int arrow_start = 0;
-    int op_len = strlen(redir_operator);
-
-    bool custom_fd = false;
-    if(isdigit(redir_operator[0])){
-        redir_info.fd = redir_operator[0] - '0';
-        arrow_start = 1;
-        custom_fd = true;
-    }
-
-    if(redir_operator[arrow_start] == '>'){
-        redir_info.redir_dir = Output;
-        if(redir_operator[arrow_start + 1] == '>'){
-            redir_info.modify_flag = Append;
-        }else{
-            redir_info.modify_flag = Trunc;
-        }
-
-        if(!custom_fd){
-            redir_info.fd = 1;
-        }
-    }else if(redir_operator[arrow_start] == '<'){
-        redir_info.redir_dir = Input;
-
-        if(!custom_fd){
-            redir_info.fd = 0;
-        }
-    }
-
-    return redir_info;    
-
+bool starts_with(char* pre,char* str){
+    return strncmp(pre,str,strlen(pre)) == 0;
 }
 
-void redirect_plan(char line[]){
+int get_command_exit(char* command){
+
+    if(starts_with("OK",command)){
+        return 0;
+    }else{
+        int exit_code = command[strlen(command) - 1] - '0';
+        return exit_code;
+    }
+}
+
+bool is_logical_operator(char* token){
+    return equal_strings(token,"||") || equal_strings(token,"&&");
+}
+
+void exit_command_chain(int code){
+    printf("EXIT: %d\n",code);
+}
+
+void evalute_commands(char line[]){
+    
+    int last_command_exit = -1;
     char* tokens[128];
     int n = tokenize(line,tokens);
+    bool run_command = true;
 
-    char* redirect_operator = tokens[0];
-    char* file = tokens[1];
+    printf("RAN:");
+    for(int i=0;i<n;i++){
+        char* token = tokens[i];
 
-    RedirInfo redir_info = parse_redir_operator(redirect_operator);
+        if(is_logical_operator(token)){
+            // || case
+            if(equal_strings(token,"||")){
+                //if last command exit is 0 dont run the next command
+                if(last_command_exit == 0)
+                    run_command = false;
+                else
+                    run_command = true;
+            // && case
+            }else {
+                if (last_command_exit == 0)
+                    run_command = true;
+                else
+                    run_command = false;
+            }
 
-    if(file[0] == '&'){
-        int old_fd = file[1] - '0';
-        int new_fd = redir_info.fd;
-        printf("DUP2 %d %d\n",old_fd,new_fd);
-    }else{
-        switch(redir_info.redir_dir){
-            case Input:
-                printf("OPEN %s RDONLY -> fd %d\n",file,FD);
-                printf("DUP2 %d %d\n",FD,redir_info.fd);
-                break;
-            case Output:
-                printf("OPEN %s WRONLY|CREAT|",file);    
-
-                if(redir_info.modify_flag == Trunc){
-                   printf("TRUNC"); 
-                }else{
-                   printf("APPEND"); 
-                }   
-
-                printf(" -> fd %d\n",FD);
-                printf("DUP2 %d %d\n",FD,redir_info.fd);
-                break;
+        }else if(run_command){
+            last_command_exit = get_command_exit(token);
+            printf(" %s",token);
         }
 
-        printf("CLOSE %d\n",FD);
     }
-    FD++;
+
+    printf("\nEXIT: %d\n",last_command_exit);
 }
 
 int main(void)
@@ -176,7 +136,7 @@ int main(void)
             line[line_length - 1] = '\0';
        }
        if(line[0] == '\n') continue;
-       redirect_plan(line);
+       evalute_commands(line);
     }
 
     return 0;
