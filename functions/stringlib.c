@@ -1,5 +1,12 @@
 #include "../includes/stringlib.h"
 
+StringList init_strings(){
+    StringList s_list;
+    s_list.idx = 0;
+    return s_list;
+}
+
+
 void add_char(char *s, char c)
 {
     int l = strlen(s);
@@ -47,3 +54,29 @@ bool is_number(char* str){
     }
     return true;
 }
+
+void print_strings(StringList str_list){
+    int n = str_list.idx;
+    for(int i=0;i<n;i++){
+        printf("%s\n",str_list.elements[i]);
+    }
+}
+
+void empty_strings(StringList* str_list){
+    int n = str_list->idx;
+    for(int i=0;i<n;i++){
+        free(str_list->elements[i]);
+    }
+
+    str_list->idx = 0;
+}
+
+int get_num_len(int n){
+    int l = 0;
+    while(n){
+        n = n/10;
+        l++;
+    }
+    return l;
+}
+

@@ -6,5 +6,6 @@ typedef StringList History;
 
 History init_history();
 char* expand_history(History* history,char line[]);
+void add_command_to_hist(History* history,char* command);
 
 #endif
