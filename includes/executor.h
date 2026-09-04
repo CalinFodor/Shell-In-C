@@ -3,6 +3,7 @@
 #include "stringlib.h"
 #include "history.h"
 #include <unistd.h>
+#include <sys/wait.h>
 
 int echo(StringList tokens);
 int pwd();

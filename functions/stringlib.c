@@ -1,7 +1,7 @@
 #include "../includes/stringlib.h"
 
 StringList init_strings(){
-    StringList s_list;
+    StringList s_list = {0};
     s_list.idx = 0;
     return s_list;
 }

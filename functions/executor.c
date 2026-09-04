@@ -86,11 +86,34 @@ int run_builtin_cmd(StringList tokens,History hist){
     }
 }
 
+int run_program(StringList tokens){
+    char* cmd = tokens.elements[0];
+    
+    tokens.elements[tokens.idx++] = NULL;
+
+    pid_t child_pid = fork();
+
+    if(child_pid == -1){
+        perror("fork");
+        return 1;
+    }
+    if(child_pid == 0){
+        int status_code = execvp(cmd,tokens.elements);
+
+        perror("execvp");
+    }else{
+        waitpid(child_pid,NULL,0);
+    }
+    return 0;
+}
+
 int run_commands(StringList tokens,History history){
 
     char* cmd = tokens.elements[0];
     if(is_builtin(cmd)){
         run_builtin_cmd(tokens,history);
+    }else{
+        run_program(tokens);
     }
 
 }
