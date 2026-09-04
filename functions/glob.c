@@ -87,9 +87,8 @@ StringList expand_globs(StringList tokens){
 
     StringList FILE_SYSTEM = get_files_in_dir(cwd);
 
-    StringList new_tokens = init_strings();
-
-    int i = 0;
+    StringList expanded_tokens; //= init_strings();
+    expanded_tokens.idx = 0;
     int n = tokens.idx;
 
    for(int i=0;i<n;i++){
@@ -99,12 +98,15 @@ StringList expand_globs(StringList tokens){
 
             for(int j=0;j<matched_files.idx;j++){
                 char* file = matched_files.elements[j];
-                add_string_to_list(&new_tokens,file);   
+                add_string_to_list(&expanded_tokens,file);   
             }
         }else{
-            add_string_to_list(&new_tokens,token);
+            add_string_to_list(&expanded_tokens,token);
         }
     }
-    return new_tokens;
+
+    empty_strings(&FILE_SYSTEM);
+
+    return expanded_tokens;
 
 }

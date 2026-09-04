@@ -7,6 +7,7 @@
 #include "includes/fs.h"
 #include "includes/glob.h"
 #include "includes/parser.h"
+#include "includes/executor.h"
 
 int main(){
 
@@ -31,14 +32,12 @@ int main(){
         add_command_to_hist(&history,line);
 
         CmdList cmd_list = parse_commands(token_list);
-
-        for(int i=0;i<cmd_list.idx;i++){
-            print_strings(cmd_list.parsed_cmds[i].cmds);
-            printf("Continuation: %s\n",cmd_list.parsed_cmds[i].continuation);
-        }
-
+        run_commands(cmd_list.parsed_cmds[0].cmds,history);
+        
         empty_strings(&token_list);
-
+        for(int i=0;i<cmd_list.idx;i++){
+            empty_strings(&cmd_list.parsed_cmds[i].cmds);
+        }
     }
 
     return 0;
