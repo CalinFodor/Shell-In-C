@@ -5,6 +5,7 @@
 #include "includes/tokenizer.h"
 #include "includes/var.h"
 #include "includes/fs.h"
+#include "includes/glob.h"
 
 int main(){
 
@@ -24,6 +25,9 @@ int main(){
         if(token_list.idx == 0) continue;
 
         token_list = expand_vars(&var_table,token_list);
+        token_list = expand_globs(token_list);
+
+        print_strings(token_list);
 
         empty_strings(&token_list);
     }

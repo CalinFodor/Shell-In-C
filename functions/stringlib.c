@@ -80,3 +80,26 @@ int get_num_len(int n){
     return l;
 }
 
+bool is_empty(char* string){
+    return strlen(string) == 0;
+}
+
+static int stringCompare(const void* a, const void* b) 
+{ 
+    return strcmp(*(const char**)a, *(const char**)b); 
+} 
+
+void sort(char* arr[], int n) 
+{ 
+    qsort(arr, n, sizeof(char*), stringCompare); 
+} 
+
+char* substring(char* string,int n){
+    int len = strlen(string) - n;
+    char* substr = (char*)malloc(len + 1);
+    strncpy(substr,string + n,len);
+    substr[len] = '\0';
+
+    return substr;
+}
+

@@ -1,6 +1,6 @@
 #include "../includes/fs.h"
 
-StringList get_all_files_in_dir(char* dir){
+StringList get_files_in_dir(char* dir){
 
     StringList files = init_strings();
 

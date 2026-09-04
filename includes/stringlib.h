@@ -21,5 +21,8 @@ bool is_number(char* str);
 void print_strings(StringList str_list);
 void empty_strings(StringList* str_list);
 int get_num_len(int n);
+void sort(char* arr[], int n);
+char* substring(char* string,int n);
+bool is_empty(char* string);
 
 #endif

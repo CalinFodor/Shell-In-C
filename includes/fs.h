@@ -3,6 +3,6 @@
 #include "stringlib.h"
 #include <dirent.h>
 
-StringList get_all_files_in_dir(char* dir);
+StringList get_files_in_dir(char* dir);
 
 #endif
