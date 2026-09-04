@@ -6,6 +6,7 @@
 #include "includes/var.h"
 #include "includes/fs.h"
 #include "includes/glob.h"
+#include "includes/parser.h"
 
 int main(){
 
@@ -27,9 +28,17 @@ int main(){
         token_list = expand_vars(&var_table,token_list);
         token_list = expand_globs(token_list);
 
-        print_strings(token_list);
+        add_command_to_hist(&history,line);
+
+        CmdList cmd_list = parse_commands(token_list);
+
+        for(int i=0;i<cmd_list.idx;i++){
+            print_strings(cmd_list.parsed_cmds[i].cmds);
+            printf("Continuation: %s\n",cmd_list.parsed_cmds[i].continuation);
+        }
 
         empty_strings(&token_list);
+
     }
 
     return 0;
