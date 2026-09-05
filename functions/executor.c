@@ -112,17 +112,18 @@ int run_builtin_cmd(StringList tokens, History hist,VariableTable* var_table)
 {
     char *cmd = tokens.elements[0];
 
+    int res = 0;
     if (equal_strings(cmd, "echo"))
     {
-        return echo(tokens);
+        res = echo(tokens);
     }
     else if (equal_strings(cmd, "pwd"))
     {
-        return pwd();
+        res = pwd();
     }
     else if (equal_strings(cmd, "cd"))
     {
-        return cd(tokens);
+        res = cd(tokens);
     }
     else if (equal_strings(cmd, "exit"))
     {
@@ -130,14 +131,15 @@ int run_builtin_cmd(StringList tokens, History hist,VariableTable* var_table)
     }
     else if (equal_strings(cmd, "history"))
     {
-        return history(hist);
+        res = history(hist);
     }else if(equal_strings(cmd,"set")){
 
-        return set(var_table,tokens);
+        res = set(var_table,tokens);
     }else if(equal_strings(cmd,"unset")){
 
-        return unset(var_table,tokens);
+        res = unset(var_table,tokens);
     }
+    return res;
 }
 
 int apply_redirections(RedirInfo redir_info)
@@ -207,7 +209,7 @@ int run_command(ParsedCmd parsed_cmd, History history,VariableTable* var_table, 
 
     char *cmd = tokens.elements[0];
 
-    if (is_builtin(cmd) && pipe_count == 0)
+    if (is_builtin(cmd))// && pipe_count == 0)
     {
         int res = run_builtin_cmd(tokens, history,var_table);
         restore_descriptor(parsed_cmd.redir_info,saved_fd);
@@ -241,15 +243,8 @@ int run_command(ParsedCmd parsed_cmd, History history,VariableTable* var_table, 
                 close(i);
         }
 
-        if (is_builtin(cmd))
-        {
-            run_builtin_cmd(tokens, history,var_table);
-        }
-        else
-        {
-            execvp(cmd, tokens.elements);
-            return -1;
-        }
+        execvp(cmd, tokens.elements);
+        return -1;        
 
         perror(cmd);
     }
@@ -257,7 +252,8 @@ int run_command(ParsedCmd parsed_cmd, History history,VariableTable* var_table, 
     {
         waitpid(child_pid, NULL, 0);
     }
-    
+
+
     if (saved_fd != -1)
         restore_descriptor(parsed_cmd.redir_info, saved_fd);
     

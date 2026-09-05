@@ -92,11 +92,12 @@ CmdList parse_commands(StringList tokens)
                 pipeline_list.pipelines[pipeline_list.pipe_count].continuation = copy_string(separator,strlen(separator));
             }
 
+
             pipeline_list.pipelines[pipeline_list.pipe_count].cmd_count++;
             pipeline_list.pipe_count++;
         }
         else if (is_pipe(token))
-        {
+        {    
             pipeline_list.pipelines[pipeline_list.pipe_count].cmd_count++;
         }
         else if (is_redirect_operator(token))
