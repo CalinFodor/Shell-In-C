@@ -21,8 +21,6 @@ typedef enum _ExpandForm{
 }ExpandForm;
 
 VariableTable init_var_table();
-void set(VariableTable* var_table,char* name,char* value);
-void unset(VariableTable* var_table,char* name);
 void add_var_to_table(VariableTable* var_table,char* name,char *value);
 char* get_var_value_from_table(VariableTable* var_table,char* name);
 void remove_var_from_table(VariableTable* var_table,char* name);

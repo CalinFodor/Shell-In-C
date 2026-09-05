@@ -43,7 +43,7 @@ int main(){
             CmdPipeline pipeline = cmd_list.pipelines[i];
             char* cont = pipeline.continuation;
 
-            int exit_code = execute_pipeline(pipeline,history);
+            int exit_code = execute_pipeline(pipeline,history,&var_table);
             
             if(cont == NULL) break;
             if(exit_code == 0 && equal_strings(cont,"||")) break;

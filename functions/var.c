@@ -23,6 +23,7 @@ void add_var_to_table(VariableTable* var_table,char* name,char *value){
     var_table->entries[var_table->idx].name = copy_string(name,strlen(name));
     var_table->entries[var_table->idx].value = copy_string(value,strlen(value));
     var_table->entries[var_table->idx].removed = false;
+    var_table->idx++;
 }
 
 char* get_var_value_from_table(VariableTable* var_table,char* name){
@@ -62,14 +63,6 @@ void free_table(VariableTable* var_table){
     var_table->idx = 0;
 }
 
-void set(VariableTable* var_table,char* name,char* value){
-    add_var_to_table(var_table,name,value);
-}
-
-void unset(VariableTable* var_table,char* name){
-    remove_var_from_table(var_table,name);
-}
-
 
 char* expand_var(VariableTable* var_table,char* token){
 
@@ -86,16 +79,19 @@ char* expand_var(VariableTable* var_table,char* token){
     if(token[1] != '{'){
         expand_form = NoCurly;
     }else {
+        char* dd_ptr = strchr(token,':');
         if(token[2] == '#'){
             expand_form = Length;
-        }else if(strchr(token,':') != NULL){
-            expand_form = DoubleDot;
+        }else if(dd_ptr!= NULL){
+            int line_pos = dd_ptr - token + 1;
+            if(token[line_pos] == '-')
+                expand_form = DoubleDot;
         }else{
             expand_form = NormalCurly; 
         }
     }
 
-    char* var_name;
+    char* var_name = NULL;
     char* value = NULL;
 
     switch(expand_form){
@@ -139,7 +135,7 @@ char* expand_var(VariableTable* var_table,char* token){
 
                 int num_len = get_num_len(val_len);
                 value = malloc(num_len+1);
-                sprintf(value,"%d",num_len);
+                sprintf(value,"%d",val_len);
             }
             break;
     }
@@ -150,7 +146,11 @@ StringList expand_vars(VariableTable* var_table,StringList str_list){
     int n = str_list.idx;
 
     for(int i=0;i<n;i++){
-        str_list.elements[i] = expand_var(var_table,str_list.elements[i]);
+        char* value = expand_var(var_table,str_list.elements[i]);
+        if(value != NULL)
+            str_list.elements[i] = value;
+        else
+            str_list.elements[i] = copy_string("",strlen(""));
     }
     return str_list;
 }

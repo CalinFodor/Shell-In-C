@@ -2,7 +2,7 @@
 
 char OLDPWD[1024] = {'\0'};
 
-static char *BUILTIN_CMDS[] = {"echo", "pwd", "cd", "exit", "history"};
+static char *BUILTIN_CMDS[] = {"echo", "pwd", "cd", "exit", "history","set","unset"};
 
 bool is_builtin(char *cmd)
 {
@@ -88,7 +88,27 @@ int history(History history)
     return 0;
 }
 
-int run_builtin_cmd(StringList tokens, History hist)
+int set(VariableTable* var_table,StringList tokens){
+    if(tokens.idx == 3){
+        char* name = tokens.elements[1];
+        char* value = tokens.elements[2];
+
+        add_var_to_table(var_table,name,value);
+    }
+    return 0;
+}
+
+int unset(VariableTable* var_table,StringList tokens){
+    if(tokens.idx == 2){
+        char* name = tokens.elements[1];
+
+        remove_var_from_table(var_table,name);
+    }
+
+    return 0;
+}
+
+int run_builtin_cmd(StringList tokens, History hist,VariableTable* var_table)
 {
     char *cmd = tokens.elements[0];
 
@@ -111,6 +131,12 @@ int run_builtin_cmd(StringList tokens, History hist)
     else if (equal_strings(cmd, "history"))
     {
         return history(hist);
+    }else if(equal_strings(cmd,"set")){
+
+        return set(var_table,tokens);
+    }else if(equal_strings(cmd,"unset")){
+
+        return unset(var_table,tokens);
     }
 }
 
@@ -168,16 +194,24 @@ void restore_descriptor(RedirInfo redir_info, int saved_fd)
     close(saved_fd);
 }
 
-int run_command(ParsedCmd parsed_cmd, History history, int in, int out, int pipe_count)
+int run_command(ParsedCmd parsed_cmd, History history,VariableTable* var_table, int in, int out, int pipe_count)
 {
     int saved_fd = apply_redirections(parsed_cmd.redir_info);
 
     StringList tokens = parsed_cmd.args;
+
+    if(tokens.idx == 0){
+        restore_descriptor(parsed_cmd.redir_info,saved_fd);
+        return 0;
+    }
+
     char *cmd = tokens.elements[0];
 
     if (is_builtin(cmd) && pipe_count == 0)
     {
-        return run_builtin_cmd(tokens, history);
+        int res = run_builtin_cmd(tokens, history,var_table);
+        restore_descriptor(parsed_cmd.redir_info,saved_fd);
+        return res;
     }
 
     tokens.elements[tokens.idx++] = NULL;
@@ -209,7 +243,7 @@ int run_command(ParsedCmd parsed_cmd, History history, int in, int out, int pipe
 
         if (is_builtin(cmd))
         {
-            run_builtin_cmd(tokens, history);
+            run_builtin_cmd(tokens, history,var_table);
         }
         else
         {
@@ -230,11 +264,11 @@ int run_command(ParsedCmd parsed_cmd, History history, int in, int out, int pipe
     return 0;
 }
 
-int execute_pipeline(CmdPipeline pipeline, History history)
+int execute_pipeline(CmdPipeline pipeline, History history,VariableTable* var_table)
 {
     if (pipeline.cmd_count == 1)
     {
-        return run_command(pipeline.parsed_cmd[0], history, 0, 1, 0);
+        return run_command(pipeline.parsed_cmd[0], history,var_table, 0, 1, 0);
     }
 
     int n = pipeline.cmd_count;
@@ -274,7 +308,7 @@ int execute_pipeline(CmdPipeline pipeline, History history)
         if (i < n - 1)
             out_dup2 = BASE_FD + 1 + 2 * i;
 
-        exit_code = run_command(parsed_cmd, history, in_dup2, out_dup2, pipe_count);
+        exit_code = run_command(parsed_cmd, history,var_table, in_dup2, out_dup2, pipe_count);
         empty_strings(&parsed_cmd.args);
     }
 

@@ -111,6 +111,11 @@ CmdList parse_commands(StringList tokens)
 
                 pipeline_list.pipelines[pipe_count].parsed_cmd[cmd_idx].redir_info = parse_redir_operator(redir_oper,target_file);
                 i++;
+
+                if(i == tokens.idx - 1){
+                    pipeline_list.pipelines[pipeline_list.pipe_count].cmd_count++;
+                    pipeline_list.pipe_count++;
+                }
             }
         }
         else
