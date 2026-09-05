@@ -90,9 +90,8 @@ CmdList parse_commands(StringList tokens)
             }else{
                 char* separator = token;
                 pipeline_list.pipelines[pipeline_list.pipe_count].continuation = copy_string(separator,strlen(separator));
-
             }
-            
+
             pipeline_list.pipelines[pipeline_list.pipe_count].cmd_count++;
             pipeline_list.pipe_count++;
         }

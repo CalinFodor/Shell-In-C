@@ -183,7 +183,7 @@ int run_command(ParsedCmd parsed_cmd, History history, int in, int out, int pipe
     tokens.elements[tokens.idx++] = NULL;
 
     pid_t child_pid = fork();
-
+    
     if (child_pid == -1)
     {
         perror("fork");
@@ -213,7 +213,8 @@ int run_command(ParsedCmd parsed_cmd, History history, int in, int out, int pipe
         }
         else
         {
-            int status_code = execvp(cmd, tokens.elements);
+            execvp(cmd, tokens.elements);
+            return -1;
         }
 
         perror(cmd);
@@ -225,7 +226,7 @@ int run_command(ParsedCmd parsed_cmd, History history, int in, int out, int pipe
     
     if (saved_fd != -1)
         restore_descriptor(parsed_cmd.redir_info, saved_fd);
-
+    
     return 0;
 }
 
