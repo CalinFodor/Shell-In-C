@@ -37,12 +37,17 @@ int main(){
         add_command_to_hist(&history,line);
 
         CmdList cmd_list = parse_commands(token_list);
-        
-        run_commands(cmd_list.cmd_info[0],history);
-        
         empty_strings(&token_list);
+
         for(int i=0;i<cmd_list.idx;i++){
-            empty_strings(&cmd_list.cmd_info[i].args);
+            CmdPipeline pipeline = cmd_list.pipelines[i];
+            char* cont = pipeline.continuation;
+
+            int exit_code = execute_pipeline(pipeline,history);
+            
+            if(cont == NULL) break;
+            if(exit_code == 0 && equal_strings(cont,"||")) break;
+            if(exit_code == 1 && equal_strings(cont,"&&")) break;
         }
 
         print_prompt();

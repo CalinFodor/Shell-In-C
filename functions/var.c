@@ -1,4 +1,4 @@
-#include "var.h"
+#include "../includes/var.h"
 
 VariableTable init_var_table(){
     VariableTable var_table;

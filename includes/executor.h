@@ -7,12 +7,13 @@
 #include <sys/wait.h>
 #include "parser.h"
 
+#define BASE_FD 10
+
 int echo(StringList tokens);
 int pwd();
 int cd(StringList tokens);
 int history(History history);
 
-//int run_pipeline(StringList tokens);
-int run_commands(ParsedCmd parsed_cmd,History history);
+int execute_pipeline(CmdPipeline pipeline,History history);
 
 #endif

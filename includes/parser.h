@@ -21,16 +21,19 @@ typedef struct  _RedirInfo{
 
 typedef struct _ParsedCmd{
     StringList args;
-    char* continuation;
     RedirInfo redir_info;
 }ParsedCmd;
 
+typedef struct _CmdPipeline{
+    ParsedCmd parsed_cmd[64];
+    int idx;
+    char* continuation;
+}CmdPipeline;
+
 typedef struct _CmdList{
-    ParsedCmd cmd_info[128];
+    CmdPipeline pipelines[64];
     int idx;
 }CmdList;
-
-
 
 CmdList parse_commands(StringList tokens);
 

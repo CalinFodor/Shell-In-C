@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 typedef struct _StringList{
-    char* elements[128];
+    char* elements[64];
     int idx;
 } StringList;
 
