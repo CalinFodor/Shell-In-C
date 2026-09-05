@@ -39,7 +39,7 @@ int main(){
         CmdList cmd_list = parse_commands(token_list);
         empty_strings(&token_list);
 
-        for(int i=0;i<cmd_list.idx;i++){
+        for(int i=0;i<cmd_list.pipe_count;i++){
             CmdPipeline pipeline = cmd_list.pipelines[i];
             char* cont = pipeline.continuation;
 

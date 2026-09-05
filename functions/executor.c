@@ -231,12 +231,12 @@ int run_command(ParsedCmd parsed_cmd, History history, int in, int out, int pipe
 
 int execute_pipeline(CmdPipeline pipeline, History history)
 {
-    if (pipeline.idx == 1)
+    if (pipeline.cmd_count == 1)
     {
         return run_command(pipeline.parsed_cmd[0], history, 0, 1, 0);
     }
 
-    int n = pipeline.idx;
+    int n = pipeline.cmd_count;
     int pipe_count = n - 1;
 
     for (int i = 0; i < pipe_count; i++)

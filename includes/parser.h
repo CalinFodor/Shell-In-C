@@ -26,13 +26,13 @@ typedef struct _ParsedCmd{
 
 typedef struct _CmdPipeline{
     ParsedCmd parsed_cmd[64];
-    int idx;
+    int cmd_count;
     char* continuation;
 }CmdPipeline;
 
 typedef struct _CmdList{
     CmdPipeline pipelines[64];
-    int idx;
+    int pipe_count;
 }CmdList;
 
 CmdList parse_commands(StringList tokens);

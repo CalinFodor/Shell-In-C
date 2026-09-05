@@ -65,12 +65,17 @@ bool is_pipe(char *s)
     return (strcmp(s, "|") == 0);
 }
 
+void add_token_to_pipeline(CmdList* pipeline,char* token){
+
+    int pipe_idx = pipeline->pipe_count;
+    int cmd_idx = pipeline->pipelines[pipe_idx].cmd_count;
+    StringList* args = &pipeline->pipelines[pipe_idx].parsed_cmd[cmd_idx].args;
+    add_string_to_list(args,token);
+}
+
 CmdList parse_commands(StringList tokens)
 {
-    CmdList cmd_list = {0};
-    cmd_list.idx = 0;
-
-    CmdPipeline buf_pipeline = {0};
+    CmdList pipeline_list = {0};
 
     for (int i = 0; i < tokens.idx; i++)
     {
@@ -78,44 +83,43 @@ CmdList parse_commands(StringList tokens)
 
         if (is_separator(token) || i == tokens.idx - 1)
         {
-            if (!is_separator(token)){
-                buf_pipeline.continuation = NULL;
-                add_string_to_list(&buf_pipeline.parsed_cmd[buf_pipeline.idx].args,token);
-            }
-            else{
-                buf_pipeline.continuation = copy_string(token, strlen(token));
-            }
+            // if its a separator or end of tokens add it to the pipeline and end it
+            if (!is_separator(token))
+            {
+                add_token_to_pipeline(&pipeline_list,token);
+            }else{
+                char* separator = token;
+                pipeline_list.pipelines[pipeline_list.pipe_count].continuation = copy_string(separator,strlen(separator));
 
-            buf_pipeline.idx++;
-            cmd_list.pipelines[cmd_list.idx++] = buf_pipeline;
-            buf_pipeline.idx = 0;
-
-            if (buf_pipeline.continuation != NULL)
-                free(buf_pipeline.continuation);
+            }
+            
+            pipeline_list.pipelines[pipeline_list.pipe_count].cmd_count++;
+            pipeline_list.pipe_count++;
         }
         else if (is_pipe(token))
         {
-            buf_pipeline.idx++;
+            pipeline_list.pipelines[pipeline_list.pipe_count].cmd_count++;
         }
         else if (is_redirect_operator(token))
         {
             if (i != tokens.idx - 1)
             {
-                char *target_file = tokens.elements[i + 1];
-                buf_pipeline.parsed_cmd[buf_pipeline.idx++].redir_info = parse_redir_operator(token, target_file);
+                char* redir_oper = token;
+                char* target_file = tokens.elements[i+1];
+
+                int pipe_count = pipeline_list.pipe_count;
+                int cmd_idx = pipeline_list.pipelines[pipe_count].cmd_count; 
+
+                pipeline_list.pipelines[pipe_count].parsed_cmd[cmd_idx].redir_info = parse_redir_operator(redir_oper,target_file);
                 i++;
-                
-                if(i == tokens.idx - 1){
-                    cmd_list.pipelines[cmd_list.idx++] = buf_pipeline;
-                    buf_pipeline.idx = 0;
-                }
             }
-        }else {
-            add_string_to_list(&buf_pipeline.parsed_cmd[buf_pipeline.idx].args,token);
+        }
+        else
+        {
+            int pipe_count = pipeline_list.pipe_count;
+            int cmd_idx = pipeline_list.pipelines[pipe_count].cmd_count; 
+            add_string_to_list(&pipeline_list.pipelines[pipe_count].parsed_cmd[cmd_idx].args,token);
         }
     }
-    return cmd_list;
+    return pipeline_list;
 }
-
-
-
