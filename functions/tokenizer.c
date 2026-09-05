@@ -41,9 +41,11 @@ TokenList tokenize(char line[]){
                    continue; 
                 }
 
-                if(is_operator(character) && in_token){
-                    
-                    add_string_to_list(&token_list,token);
+                if(is_operator(character)){
+                    if (in_token){
+                        add_string_to_list(&token_list,token);
+                        in_token=false;
+                    }
 
                     token[0] = character;
                     int offset = 1;
@@ -60,7 +62,6 @@ TokenList tokenize(char line[]){
                     add_string_to_list(&token_list,token);
 
                     token[0] = '\0';
-                    in_token=false;
                     continue;
                 }
 

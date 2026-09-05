@@ -1,5 +1,50 @@
 #include "../includes/parser.h"
 
+bool is_redirect_operator(char* token){
+    if(strlen(token) == 1)
+        return token[0] == '<' || token[0] == '>';
+    if(strlen(token) == 2)
+        return (isdigit(token[0]) && token[1] == '>')
+            || (token[0] == '>' && token[1] == '>');
+    return false; 
+}
+
+RedirInfo parse_redir_operator(char* redir_operator,char* targe_file){
+    RedirInfo redir_info = {0};
+    redir_info.target_file = copy_string(targe_file,strlen(targe_file));
+
+    int arrow_start = 0;
+    int op_len = strlen(redir_operator);
+
+    bool custom_fd = false;
+    if(isdigit(redir_operator[0])){
+        redir_info.fd = redir_operator[0] - '0';
+        arrow_start = 1;
+        custom_fd = true;
+    }
+
+    if(redir_operator[arrow_start] == '>'){
+        redir_info.redir_dir = Output;
+        if(redir_operator[arrow_start + 1] == '>'){
+            redir_info.modify_flag = Append;
+        }else{
+            redir_info.modify_flag = Trunc;
+        }
+
+        if(!custom_fd){
+            redir_info.fd = 1;
+        }
+    }else if(redir_operator[arrow_start] == '<'){
+        redir_info.redir_dir = Input;
+
+        if(!custom_fd){
+            redir_info.fd = 0;
+        }
+    }
+
+    return redir_info;    
+
+}
 
 bool is_separator(char* s){
     return equal_strings(s,"&&") || equal_strings(s,"||") || equal_strings(s,";");
@@ -13,11 +58,21 @@ CmdList parse_commands(StringList tokens){
     for(int i=0;i<tokens.idx;i++){
         char* token = tokens.elements[i];
         if(is_separator(token)){
-            cmd_list.parsed_cmds[cmd_list.idx++].continuation = token;
-        }else{
-            add_string_to_list(&cmd_list.parsed_cmds[cmd_list.idx].cmds,token);
+            cmd_list.cmd_info[cmd_list.idx++].continuation = token;
+        }else if(is_redirect_operator(token)){
+            if(i != tokens.idx - 1){
+                char* target_file = tokens.elements[i+1];
+                RedirInfo redir_info = parse_redir_operator(token,target_file);
+
+                cmd_list.cmd_info[cmd_list.idx].redir_info = redir_info;
+                //skip the target file 
+                i++;
+            }
+        }
+        else{
+            add_string_to_list(&cmd_list.cmd_info[cmd_list.idx].args,token);
             if(i == tokens.idx - 1){
-                cmd_list.parsed_cmds[cmd_list.idx++].continuation = NULL;
+                cmd_list.cmd_info[cmd_list.idx++].continuation = NULL;
             }
         }
     }

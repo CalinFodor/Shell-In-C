@@ -38,11 +38,11 @@ int main(){
 
         CmdList cmd_list = parse_commands(token_list);
         
-        run_commands(cmd_list.parsed_cmds[0].cmds,history);
+        run_commands(cmd_list.cmd_info[0],history);
         
         empty_strings(&token_list);
         for(int i=0;i<cmd_list.idx;i++){
-            empty_strings(&cmd_list.parsed_cmds[i].cmds);
+            empty_strings(&cmd_list.cmd_info[i].args);
         }
 
         print_prompt();
