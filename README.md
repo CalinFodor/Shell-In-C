@@ -2,7 +2,8 @@
 
 ![LittleShell is a toy shell in C](/docs/Presentation.png)
 
-LittleShell is a toy shell in C based on the lessons from shipthatcode.com (completed on a separate branch). It features builtin commands,program execution, history, IO redirection, pipelines and logical operators and a small test suite.
+LittleShell is a toy shell in C based on the lessons from [Shipthatcode](https://shipthatcode.com/courses/build-shell). 
+It features builtin commands,program execution, history, IO redirection, pipelines and logical operators and a small test suite.
 
 ## Features
 
