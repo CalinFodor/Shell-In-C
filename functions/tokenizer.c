@@ -1,7 +1,7 @@
 #include "../includes/tokenizer.h"
 
 bool is_operator(char c){
-    return (c=='>') || (c=='<') || (c=='='); 
+    return (c=='>') || (c=='<') || (c==';'); 
 }
 
 TokenList tokenize(char line[]){
@@ -67,8 +67,11 @@ TokenList tokenize(char line[]){
                 if(character != ' '){
                     add_char(token,character);
                     in_token = true;
-                }    
-
+                    if(character == '$'){
+                        add_char(token,character);
+                    }
+                }
+                
                 if((character == ' ' || i == line_length - 1) && in_token){
                     add_string_to_list(&token_list,token);
                     in_token = false;
@@ -116,9 +119,14 @@ TokenList tokenize(char line[]){
                 }
                 else if(character != ' '){
                     add_char(token,character);
+                    if(character == '$'){
+                        add_char(token,character);
+                    }
                 }
                 else if(character == ' ' && !space_encountered){
-                    add_char(token,character);
+                    add_string_to_list(&token_list,token);
+
+                    token[0] = '\0';
                     space_encountered = 1;
                 }
                 break;

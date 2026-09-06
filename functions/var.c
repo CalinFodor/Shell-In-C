@@ -64,19 +64,24 @@ void free_table(VariableTable* var_table){
 
 
 char* expand_var(VariableTable* var_table,char* token){
+    bool is_var = false;
 
-    if(token[0] != '$'){
+    if(token[0] == '$' && token[1] == '$'){
+        is_var = true;
+    }
+
+    if(!is_var){
         return token;
     }
 
     ExpandForm expand_form;
 
     //$var
-    if(token[1] != '{'){
+    if(token[2] != '{'){
         expand_form = NoCurly;
     }else {
         char* dd_ptr = strchr(token,':');
-        if(token[2] == '#'){
+        if(token[3] == '#'){
             expand_form = Length;
         }else if(dd_ptr!= NULL){
             int line_pos = dd_ptr - token + 1;
@@ -92,18 +97,18 @@ char* expand_var(VariableTable* var_table,char* token){
 
     switch(expand_form){
         case NoCurly:
-            var_name = copy_string(token+1,strlen(token)-1);
+            var_name = copy_string(token+2,strlen(token)-2);
 
             value = get_var_value_from_table(var_table,var_name);
             break;
         case NormalCurly:
-            var_name = copy_string(token+2,strlen(token)-2);
+            var_name = copy_string(token+3,strlen(token)-3);
             var_name[strlen(var_name) - 1] = '\0';
 
             value = get_var_value_from_table(var_table,var_name);
             break;
         case DoubleDot:
-            var_name = copy_string(token+2,strlen(token) - 2);
+            var_name = copy_string(token+3,strlen(token) - 3);
             int double_dot_pos = strchr(token,':') - token;
             var_name[double_dot_pos - 2] = '\0';
 
@@ -117,7 +122,7 @@ char* expand_var(VariableTable* var_table,char* token){
             }
             break;
         case Length:
-            var_name = copy_string(token+3,strlen(token)-3);
+            var_name = copy_string(token+4,strlen(token)-4);
             var_name[strlen(var_name) - 1] = '\0';
 
             char* val = get_var_value_from_table(var_table,var_name);
