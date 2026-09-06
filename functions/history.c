@@ -3,8 +3,7 @@
 
 History init_history()
 {
-    History history = {0};
-    return history;
+    return init_da_str(HIST_SIZE);
 }
 
 void add_command_to_hist(History *history, char *command)

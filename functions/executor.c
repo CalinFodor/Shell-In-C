@@ -17,10 +17,10 @@ bool is_builtin(char *cmd)
     return false;
 }
 
-int echo(StringList tokens)
+int echo(TokenList tokens)
 {
-    for (int i = 1; i < tokens.idx; i++)
-        printf("%s ", tokens.elements[i]);
+    for (int i = 1; i < tokens.count; i++)
+        printf("%s ", tokens.items[i]);
     printf("\n");
     return 0;
 }
@@ -37,7 +37,7 @@ int pwd()
     return 0;
 }
 
-int cd(StringList tokens)
+int cd(TokenList tokens)
 {
 
     char cwd[1024];
@@ -46,12 +46,12 @@ int cd(StringList tokens)
     char *home = getenv("HOME");
 
     char *arg = NULL;
-    if (tokens.idx == 2)
+    if (tokens.count == 2)
     {
-        arg = tokens.elements[1];
+        arg = tokens.items[1];
     }
 
-    if (tokens.idx == 1 || strcmp(arg, "~") == 0)
+    if (tokens.count == 1 || strcmp(arg, "~") == 0)
     {
         if (home == NULL)
         {
@@ -88,19 +88,19 @@ int history(History history)
     return 0;
 }
 
-int set(VariableTable* var_table,StringList tokens){
-    if(tokens.idx == 3){
-        char* name = tokens.elements[1];
-        char* value = tokens.elements[2];
+int set(VariableTable* var_table,TokenList tokens){
+    if(tokens.count == 3){
+        char* name = tokens.items[1];
+        char* value = tokens.items[2];
 
         add_var_to_table(var_table,name,value);
     }
     return 0;
 }
 
-int unset(VariableTable* var_table,StringList tokens){
-    if(tokens.idx == 2){
-        char* name = tokens.elements[1];
+int unset(VariableTable* var_table,TokenList tokens){
+    if(tokens.count == 2){
+        char* name = tokens.items[1];
 
         remove_var_from_table(var_table,name);
     }
@@ -108,9 +108,9 @@ int unset(VariableTable* var_table,StringList tokens){
     return 0;
 }
 
-int run_builtin_cmd(StringList tokens, History hist,VariableTable* var_table)
+int run_builtin_cmd(TokenList tokens, History hist,VariableTable* var_table)
 {
-    char *cmd = tokens.elements[0];
+    char *cmd = tokens.items[0];
 
     int res = 0;
     if (equal_strings(cmd, "echo"))
@@ -200,14 +200,14 @@ int run_command(ParsedCmd parsed_cmd, History history,VariableTable* var_table, 
 {
     int saved_fd = apply_redirections(parsed_cmd.redir_info);
 
-    StringList tokens = parsed_cmd.args;
+    TokenList tokens = parsed_cmd.args;
 
-    if(tokens.idx == 0){
+    if(tokens.count == 0){
         restore_descriptor(parsed_cmd.redir_info,saved_fd);
         return 0;
     }
 
-    char *cmd = tokens.elements[0];
+    char *cmd = tokens.items[0];
 
     if (is_builtin(cmd))
     {
@@ -216,7 +216,7 @@ int run_command(ParsedCmd parsed_cmd, History history,VariableTable* var_table, 
         return res;
     }
 
-    tokens.elements[tokens.idx++] = NULL;
+    tokens.items[tokens.count++] = NULL;
 
     pid_t child_pid = fork();
     
@@ -243,7 +243,7 @@ int run_command(ParsedCmd parsed_cmd, History history,VariableTable* var_table, 
                 close(i);
         }
 
-        execvp(cmd, tokens.elements);
+        execvp(cmd, tokens.items);
         return -1;        
 
         perror(cmd);
@@ -305,7 +305,7 @@ int execute_pipeline(CmdPipeline pipeline, History history,VariableTable* var_ta
             out_dup2 = BASE_FD + 1 + 2 * i;
 
         exit_code = run_command(parsed_cmd, history,var_table, in_dup2, out_dup2, pipe_count);
-        empty_strings(&parsed_cmd.args);
+        free_da_str(&parsed_cmd.args);
     }
 
     for (int i = BASE_FD; i < BASE_FD + 2 * pipe_count; i++)

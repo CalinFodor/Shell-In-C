@@ -80,28 +80,27 @@ StringList match_files(StringList FILE_SYSTEM,char* pattern){
 }
 
 
-StringList expand_globs(StringList tokens){
+TokenList expand_globs(TokenList tokens){
 
     char cwd[1024];
     getcwd(cwd,sizeof cwd);
 
     StringList FILE_SYSTEM = get_files_in_dir(cwd);
 
-    StringList expanded_tokens; //= init_strings();
-    expanded_tokens.idx = 0;
-    int n = tokens.idx;
+    TokenList expanded_tokens = {0}; //= init_strings();
+    int n = tokens.count;
 
    for(int i=0;i<n;i++){
-        char* token = tokens.elements[i];
+        char* token = tokens.items[i];
         if(is_glob(token)){
             StringList matched_files = match_files(FILE_SYSTEM,token);
 
             for(int j=0;j<matched_files.idx;j++){
                 char* file = matched_files.elements[j];
-                add_string_to_list(&expanded_tokens,file);   
+                da_append(&expanded_tokens,file);   
             }
         }else{
-            add_string_to_list(&expanded_tokens,token);
+            da_append(&expanded_tokens,token);
         }
     }
 

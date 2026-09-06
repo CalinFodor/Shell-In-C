@@ -67,21 +67,21 @@ bool is_pipe(char *s)
 
 void add_token_to_pipeline(CmdList* pipeline,char* token){
 
-    int pipe_idx = pipeline->pipe_count;
-    int cmd_idx = pipeline->pipelines[pipe_idx].cmd_count;
-    StringList* args = &pipeline->pipelines[pipe_idx].parsed_cmd[cmd_idx].args;
-    add_string_to_list(args,token);
+    int pipe_count = pipeline->pipe_count;
+    int cmd_count = pipeline->pipelines[pipe_count].cmd_count;
+    TokenList* args = &pipeline->pipelines[pipe_count].parsed_cmd[cmd_count].args;
+    da_append(args,token);
 }
 
-CmdList parse_commands(StringList tokens)
+CmdList parse_commands(TokenList tokens)
 {
     CmdList pipeline_list = {0};
 
-    for (int i = 0; i < tokens.idx; i++)
+    for (int i = 0; i < tokens.count; i++)
     {
-        char *token = tokens.elements[i];
+        char *token = tokens.items[i];
 
-        if (is_separator(token) || i == tokens.idx - 1)
+        if (is_separator(token) || i == tokens.count - 1)
         {
             // if its a separator or end of tokens add it to the pipeline and end it
             if (!is_separator(token))
@@ -102,18 +102,18 @@ CmdList parse_commands(StringList tokens)
         }
         else if (is_redirect_operator(token))
         {
-            if (i != tokens.idx - 1)
+            if (i != tokens.count - 1)
             {
                 char* redir_oper = token;
-                char* target_file = tokens.elements[i+1];
+                char* target_file = tokens.items[i+1];
 
                 int pipe_count = pipeline_list.pipe_count;
-                int cmd_idx = pipeline_list.pipelines[pipe_count].cmd_count; 
+                int cmd_count = pipeline_list.pipelines[pipe_count].cmd_count; 
 
-                pipeline_list.pipelines[pipe_count].parsed_cmd[cmd_idx].redir_info = parse_redir_operator(redir_oper,target_file);
+                pipeline_list.pipelines[pipe_count].parsed_cmd[cmd_count].redir_info = parse_redir_operator(redir_oper,target_file);
                 i++;
 
-                if(i == tokens.idx - 1){
+                if(i == tokens.count - 1){
                     pipeline_list.pipelines[pipeline_list.pipe_count].cmd_count++;
                     pipeline_list.pipe_count++;
                 }
@@ -122,8 +122,8 @@ CmdList parse_commands(StringList tokens)
         else
         {
             int pipe_count = pipeline_list.pipe_count;
-            int cmd_idx = pipeline_list.pipelines[pipe_count].cmd_count; 
-            add_string_to_list(&pipeline_list.pipelines[pipe_count].parsed_cmd[cmd_idx].args,token);
+            int cmd_count = pipeline_list.pipelines[pipe_count].cmd_count; 
+            da_append(&pipeline_list.pipelines[pipe_count].parsed_cmd[cmd_count].args,token);
         }
     }
     return pipeline_list;

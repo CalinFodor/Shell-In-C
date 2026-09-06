@@ -15,7 +15,7 @@ int main(){
 
     char line[1024];
 
-    History history = {0};
+    History history = init_history();
     VariableTable var_table = init_var_table();
 
     print_prompt();
@@ -29,7 +29,7 @@ int main(){
         char* cmds = expand_history(&history,line);
         TokenList token_list = tokenize(cmds);
 
-        if(token_list.idx == 0) continue;
+        if(token_list.count == 0) continue;
 
         token_list = expand_vars(&var_table,token_list);
         token_list = expand_globs(token_list);
@@ -38,7 +38,7 @@ int main(){
         add_command_to_hist(&history,cmd_hist);
 
         CmdList cmd_list = parse_commands(token_list);
-        empty_strings(&token_list);
+        free_da_str(&token_list);
 
         for(int i=0;i<cmd_list.pipe_count;i++){
             CmdPipeline pipeline = cmd_list.pipelines[i];

@@ -26,6 +26,6 @@ char* get_var_value_from_table(VariableTable* var_table,char* name);
 void remove_var_from_table(VariableTable* var_table,char* name);
 void print_table(VariableTable var_table);
 void free_table(VariableTable* var_table);
-StringList expand_vars(VariableTable* var_table,StringList str_list);
+TokenList expand_vars(VariableTable* var_table,TokenList str_list);
 
 #endif

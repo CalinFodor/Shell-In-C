@@ -4,6 +4,6 @@
 #include "fs.h"
 #include <unistd.h>
 
-StringList expand_globs(StringList tokens);
+TokenList expand_globs(TokenList tokens);
 
 #endif

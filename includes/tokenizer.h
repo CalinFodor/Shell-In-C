@@ -9,8 +9,6 @@ typedef enum _TokenizeState{
     DOUBLE_QUOTE
 } TokenizeState;
 
-typedef StringList TokenList;
-
 TokenList tokenize(char line[]);
 
 #endif

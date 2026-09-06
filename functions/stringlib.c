@@ -1,9 +1,25 @@
 #include "../includes/stringlib.h"
 
+
+
+DA_StringList init_da_str(int capacity){
+    DA_StringList s_list = {0};
+    s_list.capacity = capacity;
+    s_list.items = malloc(sizeof(char*)*capacity);
+    return s_list;
+}
+
+
 StringList init_strings(){
     StringList s_list = {0};
     s_list.idx = 0;
     return s_list;
+}
+
+void free_da_str(DA_StringList* str_list){
+    
+    free(str_list->items);
+    str_list->items = NULL;
 }
 
 

@@ -2,6 +2,8 @@
 #define HISTORY_H
 #include "stringlib.h"
 
+#define HIST_SIZE 64
+
 typedef DA_StringList History;
 
 History init_history();

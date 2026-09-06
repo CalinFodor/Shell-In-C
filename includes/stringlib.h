@@ -30,7 +30,11 @@ typedef struct{
     } while (0)
 
 
+typedef DA_StringList TokenList;
+
 StringList init_strings();
+DA_StringList init_da_str(int capacity);
+void free_da_str(DA_StringList* str_list);
 void add_char(char *s, char c);
 char* copy_string(char *src,int len);
 bool equal_strings(char* one,char* two);

@@ -6,7 +6,7 @@ bool is_operator(char c){
 
 TokenList tokenize(char line[]){
 
-    TokenList token_list = init_strings();
+    TokenList token_list = {0};
 
     TokenizeState current_state = DEFAULT;
 
@@ -43,7 +43,8 @@ TokenList tokenize(char line[]){
 
                 if(is_operator(character)){
                     if (in_token){
-                        add_string_to_list(&token_list,token);
+                        char* copied_token = copy_string(token,strlen(token));
+                        da_append(&token_list,copied_token);
                         in_token=false;
                     }
 
@@ -59,7 +60,8 @@ TokenList tokenize(char line[]){
                     }
 
                     token[offset] = '\0';
-                    add_string_to_list(&token_list,token);
+                    char* copied_token = copy_string(token,strlen(token));
+                    da_append(&token_list,copied_token);
 
                     token[0] = '\0';
                     continue;
@@ -71,7 +73,8 @@ TokenList tokenize(char line[]){
                 }    
 
                 if((character == ' ' || i == line_length - 1) && in_token){
-                    add_string_to_list(&token_list,token);
+                    char* copied_token = copy_string(token,strlen(token));
+                    da_append(&token_list,copied_token);
                     in_token = false;
                     //reset token
                     token[0] = '\0';
@@ -81,7 +84,8 @@ TokenList tokenize(char line[]){
 
             case SINGLE_QUOTE:
                 if(character == '\''){
-                    add_string_to_list(&token_list,token);
+                    char* copied_token = copy_string(token,strlen(token));
+                    da_append(&token_list,copied_token);
                     //reset token
                     token[0] = '\0';
                     current_state = DEFAULT;
@@ -100,7 +104,8 @@ TokenList tokenize(char line[]){
                 }
 
                 if(character == '"'){
-                    add_string_to_list(&token_list,token);
+                    char* copied_token = copy_string(token,strlen(token));
+                    da_append(&token_list,copied_token);
 
                     //reset token
                     token[0] = '\0';

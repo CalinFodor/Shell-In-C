@@ -20,7 +20,7 @@ typedef struct  _RedirInfo{
 } RedirInfo;
 
 typedef struct _ParsedCmd{
-    StringList args;
+    TokenList args;
     RedirInfo redir_info;
 }ParsedCmd;
 
@@ -35,6 +35,6 @@ typedef struct _CmdList{
     int pipe_count;
 }CmdList;
 
-CmdList parse_commands(StringList tokens);
+CmdList parse_commands(TokenList tokens);
 
 #endif

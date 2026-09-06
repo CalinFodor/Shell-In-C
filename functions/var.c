@@ -142,15 +142,15 @@ char* expand_var(VariableTable* var_table,char* token){
     return value;
 }
 
-StringList expand_vars(VariableTable* var_table,StringList str_list){
-    int n = str_list.idx;
+TokenList expand_vars(VariableTable* var_table,TokenList str_list){
+    int n = str_list.count;
 
     for(int i=0;i<n;i++){
-        char* value = expand_var(var_table,str_list.elements[i]);
+        char* value = expand_var(var_table,str_list.items[i]);
         if(value != NULL)
-            str_list.elements[i] = value;
+            str_list.items[i] = value;
         else
-            str_list.elements[i] = copy_string("",strlen(""));
+            str_list.items[i] = copy_string("",strlen(""));
     }
     return str_list;
 }

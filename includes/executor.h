@@ -10,9 +10,9 @@
 
 #define BASE_FD 10
 
-int echo(StringList tokens);
+int echo(TokenList tokens);
 int pwd();
-int cd(StringList tokens);
+int cd(TokenList tokens);
 int history(History history);
 
 int execute_pipeline(CmdPipeline pipeline,History history,VariableTable* var_table);
