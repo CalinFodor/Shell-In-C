@@ -2,6 +2,9 @@
 #define PARSER_H
 #include "stringlib.h"
 
+#define MAX_CMD 8
+#define MAX_PIPELINES 8
+
 typedef enum _RedirDir{
     Input,
     Output
@@ -25,13 +28,13 @@ typedef struct _ParsedCmd{
 }ParsedCmd;
 
 typedef struct _CmdPipeline{
-    ParsedCmd parsed_cmd[64];
+    ParsedCmd parsed_cmd[MAX_CMD];
     int cmd_count;
     char* continuation;
 }CmdPipeline;
 
 typedef struct _CmdList{
-    CmdPipeline pipelines[64];
+    CmdPipeline pipelines[MAX_PIPELINES];
     int pipe_count;
 }CmdList;
 

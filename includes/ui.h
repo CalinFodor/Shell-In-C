@@ -14,6 +14,9 @@
 #define WHT   "\x1B[37m"
 #define RESET "\x1B[0m"
 
+#define WELCOME_LEN 73
+
+void print_welcome();
 void print_prompt();
 
 #endif

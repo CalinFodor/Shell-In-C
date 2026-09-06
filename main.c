@@ -18,6 +18,7 @@ int main(){
     History history = init_strings();
     VariableTable var_table = init_var_table();
 
+    print_welcome();
     print_prompt();
 
     while (fgets(line, sizeof line, stdin)) {
