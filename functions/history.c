@@ -3,43 +3,42 @@
 
 History init_history()
 {
-    History history;
-    history.idx = 0;
+    History history = {0};
     return history;
 }
 
 void add_command_to_hist(History *history, char *command)
 {
-    add_string_to_list(history, command);
+    da_append(history,command);
 }
 
 void print_hist(History history)
 {
-    int n = history.idx;
+    int n = history.count;
     for (int i = 0; i < n; i++)
     {
-        printf("%d: %s\n", i + 1, history.elements[i]);
+        printf("%d: %s\n", i + 1, history.items[i]);
     }
 }
 
 char *print_last_command(History *history)
 {
-    if (history->idx == 0)
+    if (history->count == 0)
         return NULL;
 
-    char *last_command = history->elements[history->idx - 1];
+    char *last_command = history->items[history->count - 1];
     add_command_to_hist(history, last_command);
     return last_command;
 }
 
 char *print_n_command(History *history, int n)
 {
-    int command_len = history->idx;
+    int command_len = history->count;
     for (int i = 0; i < command_len; i++)
     {
         if (i + 1 == n)
         {
-            char *cmd = history->elements[i];
+            char *cmd = history->items[i];
             add_command_to_hist(history, cmd);
             return cmd;
         }
@@ -50,11 +49,11 @@ char *print_n_command(History *history, int n)
 
 char *print_match_command(History *history, char *str)
 {
-    int command_len = history->idx;
+    int command_len = history->count;
 
     for (int i = 0; i < command_len; i++)
     {
-        char *cmd = history->elements[i];
+        char *cmd = history->items[i];
         if (starts_with(cmd, str))
         {
             add_command_to_hist(history, cmd);

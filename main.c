@@ -15,7 +15,7 @@ int main(){
 
     char line[1024];
 
-    History history = init_strings();
+    History history = {0};
     VariableTable var_table = init_var_table();
 
     print_prompt();
@@ -34,7 +34,8 @@ int main(){
         token_list = expand_vars(&var_table,token_list);
         token_list = expand_globs(token_list);
 
-        add_command_to_hist(&history,line);
+        char* cmd_hist = copy_string(line,line_length);
+        add_command_to_hist(&history,cmd_hist);
 
         CmdList cmd_list = parse_commands(token_list);
         empty_strings(&token_list);

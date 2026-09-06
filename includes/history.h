@@ -2,7 +2,7 @@
 #define HISTORY_H
 #include "stringlib.h"
 
-typedef StringList History;
+typedef DA_StringList History;
 
 History init_history();
 char* expand_history(History* history,char line[]);
