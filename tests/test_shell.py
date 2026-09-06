@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-EXECUTABLE = "../src/./shell"
+EXECUTABLE = "../src/shell"
 
 PASSED_TESTS = 0
 FAILED_TESTS = 0
