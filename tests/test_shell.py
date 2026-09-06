@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-EXECUTABLE = "./shell"
+EXECUTABLE = "../src/./shell"
 
 PASSED_TESTS = 0
 FAILED_TESTS = 0
@@ -50,6 +50,10 @@ def command_output_test(test_input: str, expected_output: str):
 
 
 if __name__ == "__main__":
+    if not os.path.exists(EXECUTABLE):
+        print("ERROR: Executable does not exist!")
+        exit(1)
+    
     #builtin shell commands
     command_output_test("echo hello", "hello")
     command_output_test("pwd", os.getcwd())
