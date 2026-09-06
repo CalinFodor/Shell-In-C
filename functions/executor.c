@@ -19,8 +19,12 @@ bool is_builtin(char *cmd)
 
 int echo(StringList tokens)
 {
-    for (int i = 1; i < tokens.idx; i++)
-        printf("%s ", tokens.elements[i]);
+    for (int i = 1; i < tokens.idx; i++){
+        printf("%s", tokens.elements[i]);
+        if(i != tokens.idx - 1){
+            printf(" ");
+        }
+    }
     printf("\n");
     return 0;
 }

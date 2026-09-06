@@ -41,7 +41,6 @@ char* get_var_value_from_table(VariableTable* var_table,char* name){
 void remove_var_from_table(VariableTable* var_table,char* name){
     for(int i=0;i<var_table->idx;i++){
         char* key = var_table->entries[i].name;
-        char* key_value = var_table->entries[i].value;
         if(strcmp(name,key) == 0){
             var_table->entries[i].removed = true;
         }    
@@ -69,9 +68,6 @@ char* expand_var(VariableTable* var_table,char* token){
     if(token[0] != '$'){
         return token;
     }
-
-    int token_length = strlen(token);
-    int var_name_start = 0;
 
     ExpandForm expand_form;
 

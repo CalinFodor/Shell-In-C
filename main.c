@@ -11,15 +11,24 @@
 #include "includes/executor.h"
 
 
-int main(){
+int main(int argc,char* argv[]){
+
+    bool print_ui = true;
+
+    if(argc == 2 && equal_strings(argv[1],"--test")){
+        print_ui = false;
+    }
 
     char line[1024];
 
     History history = init_strings();
     VariableTable var_table = init_var_table();
 
-    print_welcome();
-    print_prompt();
+    if(print_ui){
+        print_welcome();
+        print_prompt();
+    }
+       
 
     while (fgets(line, sizeof line, stdin)) {
         
@@ -51,7 +60,9 @@ int main(){
             if(exit_code == 1 && equal_strings(cont,"&&")) break;
         }
 
-        print_prompt();
+        if(print_ui){
+            print_prompt();
+        }
     }
 
     return 0;

@@ -10,7 +10,6 @@ bool set_match(char letter,char** pattern_ptr){
     if(pattern[0] != '[')
         return false;
     
-    int pattern_length = strlen(pattern);
     bool exclude = false;
 
     //pattern is [<chars>]

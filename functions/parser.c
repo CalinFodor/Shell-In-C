@@ -20,7 +20,6 @@ RedirInfo parse_redir_operator(char *redir_operator, char *targe_file)
     redir_info.target_file = copy_string(targe_file, strlen(targe_file));
 
     int arrow_start = 0;
-    int op_len = strlen(redir_operator);
 
     bool custom_fd = false;
     if (isdigit(redir_operator[0]))

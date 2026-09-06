@@ -15,7 +15,6 @@ TokenList tokenize(char line[]){
     int line_length = strlen(line);
 
     int space_encountered = 0;
-    int escaped = 0;
     bool in_token = false;
 
     for(int i=0;i<line_length;i++)

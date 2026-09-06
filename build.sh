@@ -9,4 +9,4 @@ do
     func_arg+=" $entry"
 done 
 
-gcc main.c $func_arg -Wall -Wextra -o main && ./main
+gcc main.c $func_arg -Wall -Wextra -o shell
