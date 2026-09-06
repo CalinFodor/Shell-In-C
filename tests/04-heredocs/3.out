@@ -1,5 +1,0 @@
-CMD cat <<-DONE
-BODY:
-line1
-line2
-END

@@ -1,3 +1,0 @@
-
-set NAME=bob
-echo $NAME

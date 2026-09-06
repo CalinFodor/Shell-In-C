@@ -1,2 +1,0 @@
-OK [cat] stdout=- pipe=true
-OK [sort] stdout=- pipe=false

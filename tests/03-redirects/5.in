@@ -1,1 +1,0 @@
-ls 2>err.txt 1>out.txt

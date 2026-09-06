@@ -1,0 +1,43 @@
+#ifndef PARSER_H
+#define PARSER_H
+#include "stringlib.h"
+
+#define MAX_CMD 8
+#define MAX_PIPELINES 8
+
+typedef enum _RedirDir{
+    Input,
+    Output
+}RedirDir;
+
+typedef enum _ModifyFlag{
+    Trunc,
+    Append
+}ModifyFlag;
+
+typedef struct  _RedirInfo{
+    RedirDir redir_dir;
+    ModifyFlag modify_flag;
+    int fd;
+    char* target_file;
+} RedirInfo;
+
+typedef struct _ParsedCmd{
+    StringList args;
+    RedirInfo redir_info;
+}ParsedCmd;
+
+typedef struct _CmdPipeline{
+    ParsedCmd parsed_cmd[MAX_CMD];
+    int cmd_count;
+    char* continuation;
+}CmdPipeline;
+
+typedef struct _CmdList{
+    CmdPipeline pipelines[MAX_PIPELINES];
+    int pipe_count;
+}CmdList;
+
+CmdList parse_commands(StringList tokens);
+
+#endif

@@ -1,7 +1,0 @@
-CMD cat <<END
-BODY:
-single
-END
-CMD ls
-BODY:
-END

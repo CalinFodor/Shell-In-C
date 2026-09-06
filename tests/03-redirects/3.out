@@ -1,2 +1,0 @@
-argv=['echo', 'hello']
-redir fd=1 op=>> target=log.txt
