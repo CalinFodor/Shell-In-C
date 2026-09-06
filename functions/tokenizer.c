@@ -87,6 +87,7 @@ TokenList tokenize(char line[]){
                     current_state = DEFAULT;
                 }else if(i == line_length - 1){
                     printf("ERROR: Not found matching '\n");
+                    empty_strings(&token_list);
                     return token_list;
                 }
                 else {
@@ -107,6 +108,7 @@ TokenList tokenize(char line[]){
                     current_state = DEFAULT;
                 }else if(i == line_length - 1){
                     printf("ERROR: Not found matching \"\n");
+                    empty_strings(&token_list);
                     return token_list;
                 }else if(character == '\\'){
                     char next_char = line[i+1];
