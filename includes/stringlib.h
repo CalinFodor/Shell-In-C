@@ -11,6 +11,25 @@ typedef struct _StringList{
     int idx;
 } StringList;
 
+
+typedef struct{
+    char* items;
+    int count;
+    int capacity
+}DA_StringList;
+
+#define da_append(xs,x)\
+        do{\
+            if((xs)->count >= (xs)->capacity){\
+                if((xs)->capacity == 0) (xs)->capacity = 64;\
+                else (xs)->capacity *= 2;\
+                (xs)->items = realloc((xs)->items,(xs)->capacity*sizeof(*(xs)->items));\
+            }\
+            (xs)->items[(xs)->count++] = (x);\
+        }while(0);\
+
+
+
 StringList init_strings();
 void add_char(char *s, char c);
 char* copy_string(char *src,int len);

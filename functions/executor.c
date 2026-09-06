@@ -209,7 +209,7 @@ int run_command(ParsedCmd parsed_cmd, History history,VariableTable* var_table, 
 
     char *cmd = tokens.elements[0];
 
-    if (is_builtin(cmd))// && pipe_count == 0)
+    if (is_builtin(cmd))
     {
         int res = run_builtin_cmd(tokens, history,var_table);
         restore_descriptor(parsed_cmd.redir_info,saved_fd);
